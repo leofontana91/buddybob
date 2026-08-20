@@ -4,8 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "prisma generate && next dev --turbopack --hostname 0.0.0.0",
-    "build": "prisma generate && next build",
+    "build": "node scripts/map-db-env.cjs npx prisma generate && node scripts/map-db-env.cjs npx prisma db push && next build",
     "postinstall": "prisma generate",
+    "db:push": "node scripts/map-db-env.cjs npx prisma db push",
+    "db:seed": "node scripts/map-db-env.cjs npx prisma db seed",
     "start": "next start",
     "lint": "eslint",
     "db:migrate": "prisma migrate dev",

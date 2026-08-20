@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { createSession, homeForRole, Role } from "@/lib/auth";
+import { ensureSeedIfEmpty } from "@/lib/ensureSeed";
 
 const schema = z.object({
   email: z.string().email(),
@@ -10,6 +11,12 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
+  try {
+    await ensureSeedIfEmpty();
+  } catch (e) {
+    console.error("ensureSeedIfEmpty failed", e);
+  }
+
   const parsed = schema.safeParse(await req.json());
   if (!parsed.success) {
     return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
