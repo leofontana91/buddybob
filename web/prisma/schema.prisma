@@ -4,11 +4,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  // Neon richiede directUrl per le migrations (connection pooling)
-  // In locale si può omettere o usare lo stesso valore di DATABASE_URL
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 /// SUPER_ADMIN | ADMIN | USER
