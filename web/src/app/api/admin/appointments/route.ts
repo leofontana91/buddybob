@@ -63,7 +63,7 @@ export async function POST(req: Request) {
   }
 
   let guestName = parsed.data.guestName ?? "";
-  let userId = parsed.data.userId ?? null;
+  const userId = parsed.data.userId ?? null;
 
   if (userId) {
     const user = await prisma.account.findFirst({
