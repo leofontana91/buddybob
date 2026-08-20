@@ -3,16 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "prisma generate && next dev --turbopack --hostname 0.0.0.0",
-    "build": "node scripts/map-db-env.cjs npx prisma generate && node scripts/map-db-env.cjs npx prisma db push && next build",
-    "postinstall": "prisma generate",
+    "dev": "node scripts/map-db-env.cjs npx prisma generate && next dev --turbopack --hostname 0.0.0.0",
+    "build": "node scripts/map-db-env.cjs npx prisma generate && node scripts/map-db-env.cjs npx prisma db push --skip-generate && next build",
+    "postinstall": "node scripts/map-db-env.cjs npx prisma generate",
     "db:push": "node scripts/map-db-env.cjs npx prisma db push",
-    "db:seed": "node scripts/map-db-env.cjs npx prisma db seed",
+    "db:seed": "node scripts/map-db-env.cjs npx tsx prisma/seed.ts",
     "start": "next start",
     "lint": "eslint",
-    "db:migrate": "prisma migrate dev",
-    "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma migrate reset --force"
+    "db:migrate": "node scripts/map-db-env.cjs npx prisma migrate dev",
+    "db:reset": "node scripts/map-db-env.cjs npx prisma migrate reset --force"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
