@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "configVersion": 2,
+  "updatedAt": "2026-08-11T15:30:00Z",
+  "robot": {
+    "id": "bob-demo-001",
+    "displayName": "BOB Demo",
+    "locale": "it-IT",
+    "timezone": "Europe/Rome"
+  },
+  "modules": {
+    "reception": true,
+    "goTo": true,
+    "motion": true,
+    "speech": true,
+    "follow": true,
+    "charge": false,
+    "settings": true
+  },
+  "phrases": {
+    "welcome": "Benvenuto",
+    "howCanIHelp": "Come posso aiutarti?",
+    "goingTo": "Vado a {place}",
+    "arrived": "Siamo arrivati a {place}",
+    "navigationFailed": "Non riesco ad arrivare a {place}",
+    "followStarted": "Ok, ti seguo",
+    "followLost": "Ti ho perso di vista",
+    "personNotFound": "Non vedo nessuno da seguire",
+    "goodbye": "A presto!",
+    "configUpdated": "Configurazione aggiornata",
+    "configUpdateFailed": "Aggiornamento configurazione non riuscito"
+  },
+  "assets": {},
+  "navigation": {
+    "placeFilter": [],
+    "placeLabels": {
+      "reception": "Reception",
+      "meeting_room": "Sala riunioni",
+      "charging_pile": "Ricarica",
+      "standby": "Stand-by"
+    },
+    "speakOnStart": true,
+    "speakOnArrive": true
+  },
+  "speech": {
+    "enabledOnStart": true,
+    "continuousRecognition": false
+  },
+  "follow": {
+    "lostTimeoutSec": 8,
+    "maxDistanceMeters": 3.0,
+    "preferSmartFollow": true
+  },
+  "appointments": {
+    "bookingMode": "qr",
+    "bookingUrl": "http://10.0.2.2:3000/book/bob-demo-001",
+    "checkInSpeak": "Perfetto, ho avvisato che sei arrivato",
+    "callOperatorSpeak": "Sto chiamando un operatore",
+    "apiKey": "bob-demo-api-key"
+  },
+  "reception": {
+    "cooldownSec": 45,
+    "maxDistanceMeters": 3.0,
+    "raiseHeadVertical": 35,
+    "buttons": [
+      { "id": "goTo", "label": "Vai a…", "enabled": true },
+      { "id": "appointments", "label": "Appuntamenti", "enabled": true },
+      { "id": "documents", "label": "Documenti", "enabled": true },
+      { "id": "talkToMe", "label": "Parla con me", "enabled": true },
+      { "id": "games", "label": "Giochi", "enabled": true },
+      { "id": "callOperator", "label": "Chiama operatore", "enabled": true },
+      { "id": "voiceMemos", "label": "Memo vocali", "enabled": true },
+      { "id": "accessControl", "label": "Controllo accessi", "enabled": true }
+    ]
+  },
+  "ui": {
+    "theme": "light",
+    "showEventLog": true,
+    "primaryCta": "goTo"
+  },
+  "sync": {
+    "fetchOnLaunch": true,
+    "endpoint": "http://10.0.2.2:3000"
+  }
+}

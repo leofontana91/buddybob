@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bob_cream"
+    android:orientation="vertical"
+    android:padding="@dimen/screen_padding"
+    tools:context=".ui.DocumentsFragment">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:letterSpacing="-0.03"
+        android:text="@string/docs_title"
+        android:textColor="@color/bob_black"
+        android:textSize="@dimen/text_title"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="@string/docs_hint"
+        android:textColor="@color/bob_muted"
+        android:textSize="@dimen/text_body" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/list_documents"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="16dp"
+        android:layout_weight="1"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/text_docs_empty"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="@string/docs_loading"
+        android:textColor="@color/bob_muted"
+        android:textSize="@dimen/text_body" />
+
+    <Button
+        android:id="@+id/btn_back"
+        style="@style/BuddyButton.Primary"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/btn_height_secondary"
+        android:layout_marginTop="12dp"
+        android:text="@string/back" />
+</LinearLayout>

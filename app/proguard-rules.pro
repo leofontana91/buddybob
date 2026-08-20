@@ -1,0 +1,2 @@
+-keep class com.ainirobot.** { *; }
+-dontwarn com.ainirobot.**

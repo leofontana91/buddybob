@@ -1,0 +1,26 @@
+# Android / Gradle
+app/build/
+build/
+.gradle/
+local.properties
+*.apk
+*.aab
+*.keystore
+
+# Web
+web/node_modules/
+web/.next/
+web/.env
+web/.env.local
+web/prisma/*.db
+web/prisma/*.db-journal
+
+# IDE
+.idea/
+*.iml
+
+# macOS
+.DS_Store
+
+# Cursor
+.cursor/

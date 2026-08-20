@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bob_cream"
+    android:orientation="vertical"
+    android:padding="28dp"
+    tools:context=".ui.BookAppointmentFragment">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:letterSpacing="-0.03"
+        android:text="@string/appointments_book"
+        android:textColor="@color/bob_black"
+        android:textSize="26sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/text_book_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textColor="@color/bob_muted"
+        android:textSize="14sp" />
+
+    <!-- QR mode -->
+    <LinearLayout
+        android:id="@+id/panel_qr"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/image_qr"
+            android:layout_width="240dp"
+            android:layout_height="240dp"
+            android:contentDescription="@string/appointments_qr"
+            android:scaleType="fitCenter" />
+
+        <TextView
+            android:id="@+id/text_qr_url"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center"
+            android:textColor="@color/bob_muted"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- In-app wizard -->
+    <LinearLayout
+        android:id="@+id/panel_in_app"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <EditText
+            android:id="@+id/input_guest_name"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_panel_round"
+            android:hint="@string/appointments_guest_name"
+            android:inputType="textPersonName"
+            android:paddingHorizontal="16dp"
+            android:textColor="@color/bob_black"
+            android:textColorHint="@color/bob_muted" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler_slots"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="12dp"
+            android:layout_weight="1" />
+
+        <Button
+            android:id="@+id/btn_confirm_booking"
+            style="@style/BuddyButton.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:enabled="false"
+            android:text="@string/appointments_confirm" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btn_back"
+        style="@style/BuddyButton"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="12dp"
+        android:text="@string/back" />
+</LinearLayout>

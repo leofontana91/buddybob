@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="6dp">
+
+    <Button
+        android:id="@+id/btn_appointment_item"
+        style="@style/BuddyButton.Primary"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:gravity="start|center_vertical"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:textSize="17sp" />
+</FrameLayout>

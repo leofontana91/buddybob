@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bob_cream"
+    android:orientation="vertical"
+    android:padding="20dp"
+    tools:context=".ui.FollowFragment">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/follow"
+        android:textColor="@color/bob_black"
+        android:textSize="24sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="Focus follow: il robot gira testa (monitor) e chassis verso l'utente. Ferma navigazione/movimento prima di avviarlo."
+        android:textColor="@color/bob_muted"
+        android:textSize="13sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal">
+
+        <Button android:id="@+id/btn_detect" style="@style/BuddyButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:text="Rileva" />
+        <Button android:id="@+id/btn_follow_best" style="@style/BuddyButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:text="Follow volto" />
+        <Button android:id="@+id/btn_follow_smart" style="@style/BuddyButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:text="Smart follow" />
+        <Button android:id="@+id/btn_follow_stop" style="@style/BuddyButton.Danger" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:text="Stop" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/text_feedback"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@color/bob_panel"
+        android:minHeight="48dp"
+        android:padding="12dp"
+        android:textColor="@color/bob_navy"
+        tools:text="Focus follow started on faceId=3" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        android:layout_weight="1"
+        android:background="@color/bob_panel"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/text_people"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:textColor="@color/bob_muted"
+            android:textSize="13sp"
+            tools:text="id=3 dist=1.20m angle=12" />
+    </ScrollView>
+
+    <Button
+        android:id="@+id/btn_back"
+        style="@style/BuddyButton"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="@string/back" />
+</LinearLayout>

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bob_cream"
+    android:orientation="vertical"
+    android:padding="20dp"
+    tools:context=".ui.NavigationFragment">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/navigation"
+        android:textColor="@color/bob_black"
+        android:textSize="24sp"
+        android:textStyle="bold" />
+
+    <EditText
+        android:id="@+id/edit_destination"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@color/bob_panel"
+        android:hint="Nome punto (es. reception)"
+        android:padding="14dp"
+        android:textColor="@color/bob_black"
+        android:textColorHint="@color/bob_muted" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button android:id="@+id/btn_estimate" style="@style/BuddyButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:text="Localizzato?" />
+        <Button android:id="@+id/btn_places" style="@style/BuddyButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:text="Punti mappa" />
+        <Button android:id="@+id/btn_go" style="@style/BuddyButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:text="Vai" />
+        <Button android:id="@+id/btn_stop_nav" style="@style/BuddyButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:text="Stop" />
+        <Button android:id="@+id/btn_charge" style="@style/BuddyButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:text="Ricarica" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:layout_weight="1"
+        android:background="@color/bob_panel"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/text_feedback"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/bob_muted"
+            tools:text="Localized: YES" />
+    </ScrollView>
+
+    <Button
+        android:id="@+id/btn_back"
+        style="@style/BuddyButton"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="@string/back" />
+</LinearLayout>

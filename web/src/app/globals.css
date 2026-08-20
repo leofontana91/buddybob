@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+:root {
+  --bob-cream: #f5f3ef;
+  --bob-black: #181818;
+  --bob-navy: #0d2c50;
+  --bob-teal: #087589;
+  --bob-line: #d8d4ce;
+  --bob-muted: #626262;
+  color-scheme: light;
+}
+
+/*
+ * Custom rules must live in @layer base. Unlayered `body { color }` / `a { color: inherit }`
+ * beat Tailwind utilities (text-white), so black pills stay black-on-black.
+ */
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    background: var(--bob-cream);
+    color: var(--bob-black);
+    font-family: var(--font-geist-sans), system-ui, sans-serif;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button {
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  .bob-btn {
+    background-color: var(--bob-black);
+    color: #ffffff;
+  }
+
+  .bob-dialog {
+    background-color: #ffffff;
+    color: var(--bob-black);
+  }
+}

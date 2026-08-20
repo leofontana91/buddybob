@@ -1,0 +1,218 @@
+// Prisma schema — BOB multi-tenant: Super Admin → Admin → Users + Robots
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Neon richiede directUrl per le migrations (connection pooling)
+  // In locale si può omettere o usare lo stesso valore di DATABASE_URL
+  directUrl = env("DIRECT_URL")
+}
+
+/// SUPER_ADMIN | ADMIN | USER
+model Account {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  /// Persona di riferimento (admin) o nome utente
+  name         String
+  /// Null finché l'admin non completa l'attivazione via email
+  passwordHash String?
+  role         String
+  /// pending | active | disabled
+  status       String  @default("active")
+  activationToken   String?   @unique
+  activationExpires DateTime?
+
+  /// Solo ADMIN (azienda) — compilati dal Super Admin
+  companyName String?
+  address     String?
+  city        String?
+
+  /// Moduli abilitati dal Super Admin (JSON). Solo ADMIN.
+  modulesJson String @default("{}")
+
+  /// For USER accounts: owning ADMIN
+  adminId String?
+  admin   Account?  @relation("AdminUsers", fields: [adminId], references: [id], onDelete: Cascade)
+  users   Account[] @relation("AdminUsers")
+
+  robotLinks   AdminRobot[]
+  appointments Appointment[]
+  createdAt    DateTime      @default(now())
+}
+
+model Robot {
+  id             String @id
+  displayName    String
+  /// Numero di serie fisico del robot (univoco)
+  serialNumber   String @unique
+  apiKey         String @unique
+  /// Abilitato dal Super Admin
+  enabled        Boolean @default(true)
+  /// Codice a 6 cifre, valido fino a pairingOpenUntil
+  pairingCode       String?
+  pairingOpenUntil  DateTime?
+  timezone       String  @default("Europe/Rome")
+  locale         String  @default("it-IT")
+  createdAt      DateTime @default(now())
+  settings       RobotSettings?
+  appointments   Appointment[]
+  operatorAlerts OperatorAlert[]
+  adminLinks     AdminRobot[]
+  mapPlaces      MapPlace[]
+  commands       RobotCommand[]
+  formTemplates  FormTemplate[]
+  accessVisits   AccessVisit[]
+}
+
+model AdminRobot {
+  adminId String
+  robotId String
+  admin   Account @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  robot   Robot   @relation(fields: [robotId], references: [id], onDelete: Cascade)
+
+  @@id([adminId, robotId])
+}
+
+model RobotSettings {
+  id                String @id @default(cuid())
+  robotId           String @unique
+  robot             Robot  @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  bookingMode       String @default("qr")
+  bookingUrl        String @default("")
+  checkInSpeak      String @default("Perfetto, ho avvisato che sei arrivato")
+  callOperatorSpeak String @default("Sto chiamando un operatore")
+  dayStart          String @default("09:00")
+  dayEnd            String @default("18:00")
+  slotMinutes       Int    @default(30)
+}
+
+model Appointment {
+  id         String   @id @default(cuid())
+  robotId    String
+  robot      Robot    @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       Account? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guestName  String
+  guestPhone String?
+  startsAt   DateTime
+  status     String   @default("scheduled")
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  alerts     OperatorAlert[]
+
+  @@index([robotId, startsAt])
+  @@index([userId, startsAt])
+}
+
+model OperatorAlert {
+  id            String       @id @default(cuid())
+  robotId       String
+  robot         Robot        @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  type          String
+  message       String
+  appointmentId String?
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  readAt        DateTime?
+  createdAt     DateTime     @default(now())
+
+  @@index([robotId, createdAt])
+}
+
+/// Punti mappa sincronizzati dal robot (Vai a…)
+model MapPlace {
+  id        String   @id @default(cuid())
+  robotId   String
+  robot     Robot    @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  name      String
+  x         Float    @default(0)
+  y         Float    @default(0)
+  theta     Float    @default(0)
+  /// Etichetta visibile al posto del nome tecnico
+  label           String?
+  /// Cosa dice il robot quando parte verso questo punto
+  speakOnDepart   String?
+  /// Cosa dice mentre si muove
+  speakWhileMoving String?
+  /// Cosa dice quando arriva
+  speakOnArrive   String?
+  /// Cosa mostra sul monitor quando parte
+  displayOnDepart String?
+  /// Cosa mostra sul monitor mentre si muove
+  displayWhileMoving String?
+  /// Cosa mostra sul monitor quando arriva
+  displayOnArrive String?
+  /// Secondi di attesa al punto prima di proseguire (0 = non aspettare)
+  waitSeconds     Int     @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([robotId, name])
+}
+
+/// Coda comandi dal web verso il robot (goto / speak / stop)
+model RobotCommand {
+  id        String    @id @default(cuid())
+  robotId   String
+  robot     Robot     @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  /// goto | speak | stop
+  type      String
+  payload   String    @default("{}")
+  /// pending | running | done | failed
+  status    String    @default("pending")
+  error     String?
+  createdAt DateTime  @default(now())
+  ackedAt   DateTime?
+
+  @@index([robotId, status, createdAt])
+}
+
+model FormTemplate {
+  id          String           @id @default(cuid())
+  robotId     String
+  robot       Robot            @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  name        String
+  enabled     Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  fields      FormField[]
+  submissions FormSubmission[]
+}
+
+model FormField {
+  id         String       @id @default(cuid())
+  templateId String
+  template   FormTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  label      String
+  /// text | textarea | yesno | number
+  type       String       @default("text")
+  required   Boolean      @default(true)
+  sortOrder  Int          @default(0)
+}
+
+model FormSubmission {
+  id          String       @id @default(cuid())
+  templateId  String
+  template    FormTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  robotId     String
+  answersJson String
+  guestName   String?
+  createdAt   DateTime     @default(now())
+
+  @@index([robotId, createdAt])
+  @@index([templateId, createdAt])
+}
+
+model AccessVisit {
+  id        String    @id @default(cuid())
+  robotId   String
+  robot     Robot     @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  firstName String
+  lastName  String
+  enteredAt DateTime  @default(now())
+  exitedAt  DateTime?
+
+  @@index([robotId, enteredAt])
+  @@index([robotId, exitedAt])
+}

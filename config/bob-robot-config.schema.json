@@ -1,0 +1,359 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bobrobotics.com/schemas/bob-robot-config.schema.json",
+  "title": "BOB Robot App Config",
+  "description": "Remote configuration for the BOB OrionStar APK. Served by the admin platform and cached on-device.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "configVersion", "robot", "modules", "phrases"],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1,
+      "description": "Breaking schema revision. Bump only when fields are incompatible."
+    },
+    "configVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Monotonic content version. Robot compares this to decide if an update is needed."
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp of last publish from the admin platform."
+    },
+    "robot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "displayName"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable robot / site id used by GET /robots/{id}/config"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Human label shown in UI / admin (e.g. Ristorante Rossi - Sala)"
+        },
+        "locale": {
+          "type": "string",
+          "default": "it-IT",
+          "description": "Default locale for phrases and TTS"
+        },
+        "timezone": {
+          "type": "string",
+          "default": "Europe/Rome"
+        }
+      }
+    },
+    "modules": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Feature flags for Home and related screens. Missing keys default to false on the app.",
+      "properties": {
+        "reception": {
+          "type": "boolean",
+          "description": "Welcome / reception mode: greet on person detect, then show menu"
+        },
+        "goTo": {
+          "type": "boolean",
+          "description": "Vai a… / places navigation"
+        },
+        "motion": {
+          "type": "boolean",
+          "description": "Manual chassis + head control"
+        },
+        "speech": {
+          "type": "boolean",
+          "description": "TTS / ASR panel"
+        },
+        "follow": {
+          "type": "boolean",
+          "description": "Focus / smart follow"
+        },
+        "charge": {
+          "type": "boolean",
+          "description": "Go to charging dock actions"
+        },
+        "settings": {
+          "type": "boolean",
+          "default": true,
+          "description": "Settings screen (includes Update config)"
+        }
+      }
+    },
+    "phrases": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "TTS strings. Placeholders use {name} syntax.",
+      "properties": {
+        "welcome": {
+          "type": "string",
+          "description": "Reception greeting when a person is detected"
+        },
+        "howCanIHelp": {
+          "type": "string",
+          "description": "Spoken after welcome, before showing the menu"
+        },
+        "goingTo": {
+          "type": "string",
+          "description": "Before navigation. Placeholder: {place}"
+        },
+        "arrived": {
+          "type": "string",
+          "description": "Navigation success. Placeholder: {place}"
+        },
+        "navigationFailed": {
+          "type": "string",
+          "description": "Navigation error. Placeholder: {place}, {reason}"
+        },
+        "followStarted": {
+          "type": "string"
+        },
+        "followLost": {
+          "type": "string"
+        },
+        "personNotFound": {
+          "type": "string"
+        },
+        "goodbye": {
+          "type": "string"
+        },
+        "configUpdated": {
+          "type": "string",
+          "description": "After manual config refresh succeeds"
+        },
+        "configUpdateFailed": {
+          "type": "string"
+        }
+      }
+    },
+    "assets": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Remote media URLs. App downloads and caches by url + etag/version.",
+      "properties": {
+        "splash": {
+          "$ref": "#/$defs/assetRef"
+        },
+        "homeLogo": {
+          "$ref": "#/$defs/assetRef"
+        },
+        "homeBanner": {
+          "$ref": "#/$defs/assetRef"
+        },
+        "idleScreen": {
+          "$ref": "#/$defs/assetRef"
+        }
+      }
+    },
+    "navigation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "placeFilter": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "If non-empty, only these map place names are shown in Vai a…"
+        },
+        "placeLabels": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Optional display labels keyed by map place name. Example: {\"reception\": \"Reception\"}"
+        },
+        "speakOnStart": {
+          "type": "boolean",
+          "default": true
+        },
+        "speakOnArrive": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "speech": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabledOnStart": {
+          "type": "boolean",
+          "default": true
+        },
+        "continuousRecognition": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "follow": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "lostTimeoutSec": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 8
+        },
+        "maxDistanceMeters": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 10,
+          "default": 3
+        },
+        "preferSmartFollow": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "appointments": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Appointments module settings from the admin platform.",
+      "properties": {
+        "bookingMode": {
+          "type": "string",
+          "enum": ["qr", "in_app"],
+          "default": "qr",
+          "description": "How guests book when they have no appointment"
+        },
+        "bookingUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Public booking page shown as QR when bookingMode=qr"
+        },
+        "checkInSpeak": {
+          "type": "string",
+          "default": "Perfetto, ho avvisato che sei arrivato"
+        },
+        "callOperatorSpeak": {
+          "type": "string",
+          "default": "Sto chiamando un operatore"
+        },
+        "apiKey": {
+          "type": "string",
+          "description": "Robot API key for Bearer auth against the admin platform"
+        }
+      }
+    },
+    "reception": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Welcome flow settings. Gated by modules.reception.",
+      "properties": {
+        "cooldownSec": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 600,
+          "default": 45,
+          "description": "Seconds after guest leaves before greeting again"
+        },
+        "maxDistanceMeters": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 8,
+          "default": 3
+        },
+        "raiseHeadVertical": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 90,
+          "default": 35,
+          "description": "Absolute vertical gimbal angle while greeting"
+        },
+        "buttons": {
+          "type": "array",
+          "description": "Reception menu buttons. Order = display order. id is stable; label is shown.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "enum": [
+                  "goTo",
+                  "appointments",
+                  "documents",
+                  "talkToMe",
+                  "games",
+                  "callOperator",
+                  "voiceMemos",
+                  "accessControl"
+                ]
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "enabled": {
+                "type": "boolean",
+                "default": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "theme": {
+          "type": "string",
+          "enum": ["light", "dark"],
+          "default": "light"
+        },
+        "showEventLog": {
+          "type": "boolean",
+          "default": true
+        },
+        "primaryCta": {
+          "type": "string",
+          "enum": ["goTo", "follow", "speech", "none"],
+          "default": "goTo",
+          "description": "Which action is the large Home button"
+        }
+      }
+    },
+    "sync": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "endpoint": {
+          "type": "string",
+          "format": "uri",
+          "description": "Base config URL override. Default is baked into the app build."
+        },
+        "fetchOnLaunch": {
+          "type": "boolean",
+          "default": true,
+          "description": "If true, try network refresh once at startup; still uses cache if offline."
+        }
+      }
+    }
+  },
+  "$defs": {
+    "assetRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url"],
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "checksum": {
+          "type": "string",
+          "description": "Optional sha256 hex for integrity check"
+        },
+        "contentType": {
+          "type": "string",
+          "examples": ["image/png", "image/jpeg", "image/webp"]
+        }
+      }
+    }
+  }
+}

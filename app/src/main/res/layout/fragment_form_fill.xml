@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bob_cream"
+    android:orientation="vertical"
+    android:padding="@dimen/screen_padding"
+    tools:context=".ui.FormFillFragment">
+
+    <TextView
+        android:id="@+id/text_form_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:letterSpacing="-0.03"
+        android:textColor="@color/bob_black"
+        android:textSize="@dimen/text_title"
+        android:textStyle="bold"
+        tools:text="Registrazione ospite" />
+
+    <TextView
+        android:id="@+id/text_form_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textColor="@color/bob_muted"
+        android:textSize="@dimen/text_body" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:id="@+id/container_questions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+
+    <Button
+        android:id="@+id/btn_submit_form"
+        style="@style/BuddyButton.Primary"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/btn_height_secondary"
+        android:layout_marginTop="12dp"
+        android:text="@string/docs_submit" />
+
+    <Button
+        android:id="@+id/btn_back"
+        style="@style/BuddyButton"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/btn_height_secondary"
+        android:layout_marginTop="8dp"
+        android:text="@string/back" />
+</LinearLayout>

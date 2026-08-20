@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bob_cream"
+    android:fillViewport="true"
+    tools:context=".ui.PairingFragment">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="28dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:letterSpacing="-0.03"
+            android:text="@string/pairing_title"
+            android:textColor="@color/bob_black"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/text_pairing_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textColor="@color/bob_muted"
+            android:textSize="14sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="@string/pairing_hint"
+            android:textColor="@color/bob_muted"
+            android:textSize="15sp" />
+
+        <EditText
+            android:id="@+id/input_endpoint"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/bg_panel_round"
+            android:hint="@string/pairing_endpoint"
+            android:inputType="textUri"
+            android:paddingHorizontal="14dp"
+            android:textColor="@color/bob_black"
+            android:textColorHint="@color/bob_muted"
+            android:textSize="15sp" />
+
+        <EditText
+            android:id="@+id/input_serial"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_panel_round"
+            android:hint="@string/pairing_serial"
+            android:inputType="textCapCharacters"
+            android:paddingHorizontal="14dp"
+            android:textColor="@color/bob_black"
+            android:textColorHint="@color/bob_muted"
+            android:textSize="16sp" />
+
+        <EditText
+            android:id="@+id/input_code"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_panel_round"
+            android:gravity="center"
+            android:hint="@string/pairing_code"
+            android:inputType="number"
+            android:letterSpacing="0.2"
+            android:maxLength="6"
+            android:paddingHorizontal="14dp"
+            android:textColor="@color/bob_black"
+            android:textColorHint="@color/bob_muted"
+            android:textSize="28sp" />
+
+        <Button
+            android:id="@+id/btn_save_pairing"
+            style="@style/BuddyButton.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_marginTop="20dp"
+            android:text="@string/pairing_connect" />
+
+        <Button
+            android:id="@+id/btn_clear_pairing"
+            style="@style/BuddyButton"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="8dp"
+            android:text="@string/pairing_clear" />
+
+        <Button
+            android:id="@+id/btn_back"
+            style="@style/BuddyButton"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="8dp"
+            android:text="@string/back" />
+    </LinearLayout>
+</ScrollView>

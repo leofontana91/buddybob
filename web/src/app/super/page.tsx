@@ -1,0 +1,466 @@
+"use client";
+
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import {
+  DEFAULT_ADMIN_MODULES,
+  MODULE_LABELS,
+  AdminModules,
+} from "@/lib/modules";
+
+type AdminRow = {
+  id: string;
+  email: string;
+  name: string;
+  companyName?: string | null;
+  address?: string | null;
+  city?: string | null;
+  status: string;
+  userCount: number;
+  modules: AdminModules;
+  robots: {
+    id: string;
+    displayName: string;
+    serialNumber: string;
+    enabled: boolean;
+    pairingOpenUntil?: string | null;
+  }[];
+};
+
+type RobotRow = {
+  id: string;
+  displayName: string;
+  serialNumber: string;
+  apiKey: string;
+  enabled: boolean;
+  admins: { id: string; name: string; companyName?: string | null; email: string }[];
+};
+
+export default function SuperPage() {
+  const [admins, setAdmins] = useState<AdminRow[]>([]);
+  const [robots, setRobots] = useState<RobotRow[]>([]);
+  const [msg, setMsg] = useState("");
+  const [activationUrl, setActivationUrl] = useState("");
+
+  const [email, setEmail] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [robotSerial, setRobotSerial] = useState("");
+  const [robotDisplayName, setRobotDisplayName] = useState("");
+  const [robotEnabled, setRobotEnabled] = useState(true);
+  const [modules, setModules] = useState<AdminModules>({
+    ...DEFAULT_ADMIN_MODULES,
+  });
+
+  const [pairOpen, setPairOpen] = useState(false);
+  const [pairLoading, setPairLoading] = useState(false);
+  const [pairTitle, setPairTitle] = useState("");
+  const [pairSerial, setPairSerial] = useState("");
+  const [pairCode, setPairCode] = useState("");
+  const [pairUntil, setPairUntil] = useState("");
+
+  const load = useCallback(async () => {
+    const res = await fetch("/api/super");
+    if (!res.ok) return;
+    const data = await res.json();
+    setAdmins(data.admins ?? []);
+    setRobots(data.robots ?? []);
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function post(body: Record<string, unknown>) {
+    setMsg("");
+    setActivationUrl("");
+    const res = await fetch("/api/super", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setMsg(data.error ?? "Errore");
+      return data;
+    }
+    setMsg("OK");
+    if (data.activationUrl) setActivationUrl(data.activationUrl);
+    await load();
+    return data;
+  }
+
+  async function createAdmin(e: FormEvent) {
+    e.preventDefault();
+    await post({
+      action: "create_admin",
+      email,
+      companyName,
+      name,
+      address,
+      city,
+      robotSerial,
+      robotDisplayName: robotDisplayName || undefined,
+      robotEnabled,
+      modules,
+    });
+    setEmail("");
+    setCompanyName("");
+    setName("");
+    setAddress("");
+    setCity("");
+    setRobotSerial("");
+    setRobotDisplayName("");
+    setModules({ ...DEFAULT_ADMIN_MODULES });
+  }
+
+  function toggleModule(key: keyof AdminModules) {
+    setModules((m) => ({ ...m, [key]: !m[key] }));
+  }
+
+  async function openPairing(robotId: string) {
+    setPairOpen(true);
+    setPairLoading(true);
+    setPairCode("");
+    setPairSerial("");
+    setPairUntil("");
+    setPairTitle(robotId);
+    const data = (await post({ action: "open_pairing", robotId })) as {
+      pairingCode?: string;
+      serialNumber?: string;
+      displayName?: string;
+      pairingOpenUntil?: string;
+      error?: string;
+    };
+    setPairLoading(false);
+    if (!data?.pairingCode) {
+      setPairOpen(false);
+      return;
+    }
+    setPairTitle(data.displayName ?? robotId);
+    setPairSerial(data.serialNumber ?? "");
+    setPairCode(data.pairingCode);
+    setPairUntil(data.pairingOpenUntil ?? "");
+  }
+
+  return (
+    <div className="space-y-10">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Super Admin</h1>
+        <p className="text-[var(--bob-muted)] mt-1">
+          Crea aziende (admin), collega robot per seriale, abilita moduli
+        </p>
+        {msg ? (
+          <p className="mt-2 text-sm text-[var(--bob-teal)]">{msg}</p>
+        ) : null}
+        {activationUrl ? (
+          <p className="mt-2 text-sm break-all">
+            Link attivazione (copia e invia se la mail non è configurata):{" "}
+            <a className="underline text-[var(--bob-navy)]" href={activationUrl}>
+              {activationUrl}
+            </a>
+          </p>
+        ) : null}
+      </div>
+
+      <form
+        onSubmit={createAdmin}
+        className="rounded-2xl bg-white border border-[var(--bob-line)] p-6 space-y-4"
+      >
+        <h2 className="font-semibold text-lg">Nuova azienda (Admin)</h2>
+        <div className="grid md:grid-cols-2 gap-3">
+          <input
+            required
+            placeholder="Nome azienda"
+            className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
+          />
+          <input
+            required
+            placeholder="Nome persona di riferimento"
+            className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <input
+            required
+            type="email"
+            placeholder="Email (riceverà attivazione)"
+            className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <input
+            required
+            placeholder="Città"
+            className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+          />
+          <input
+            required
+            placeholder="Indirizzo"
+            className="md:col-span-2 rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+          />
+        </div>
+
+        <h3 className="font-medium pt-2">Robot</h3>
+        <div className="grid md:grid-cols-2 gap-3">
+          <input
+            required
+            placeholder="Numero di serie"
+            className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            value={robotSerial}
+            onChange={(e) => setRobotSerial(e.target.value)}
+          />
+          <input
+            placeholder="Nome robot (opzionale)"
+            className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            value={robotDisplayName}
+            onChange={(e) => setRobotDisplayName(e.target.value)}
+          />
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={robotEnabled}
+              onChange={(e) => setRobotEnabled(e.target.checked)}
+            />
+            Robot abilitato
+          </label>
+        </div>
+
+        <h3 className="font-medium pt-2">Moduli abilitati</h3>
+        <div className="flex flex-wrap gap-2">
+          {(Object.keys(MODULE_LABELS) as (keyof AdminModules)[]).map((key) => (
+            <label
+              key={key}
+              className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm cursor-pointer ${
+                modules[key]
+                  ? "border-[var(--bob-black)] bg-[var(--bob-cream)]"
+                  : "border-[var(--bob-line)] opacity-60"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={modules[key]}
+                onChange={() => toggleModule(key)}
+              />
+              {MODULE_LABELS[key]}
+            </label>
+          ))}
+        </div>
+
+        <button
+          type="submit"
+          className="bob-btn rounded-full px-6 py-2.5 font-medium"
+        >
+          Crea admin + robot e invia attivazione
+        </button>
+      </form>
+
+      <section>
+        <h2 className="font-semibold text-lg mb-3">Aziende / Admin</h2>
+        <ul className="space-y-4">
+          {admins.map((a) => (
+            <li
+              key={a.id}
+              className="rounded-2xl bg-white border border-[var(--bob-line)] px-4 py-4 space-y-3"
+            >
+              <div className="flex flex-wrap justify-between gap-2">
+                <div>
+                  <p className="font-semibold text-lg">
+                    {a.companyName ?? a.name}
+                  </p>
+                  <p className="text-sm text-[var(--bob-muted)]">
+                    {a.name} · {a.email}
+                    {a.city ? ` · ${a.city}` : ""}
+                    {a.address ? ` · ${a.address}` : ""}
+                  </p>
+                  <p className="text-xs mt-1 uppercase tracking-wide">
+                    Stato: <strong>{a.status}</strong> · Utenti: {a.userCount}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {a.status !== "active" ? (
+                    <button
+                      type="button"
+                      className="text-xs rounded-full border border-[var(--bob-line)] px-3 py-1.5"
+                      onClick={() =>
+                        post({ action: "resend_activation", adminId: a.id })
+                      }
+                    >
+                      Reinvia attivazione
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="text-xs rounded-full border border-[var(--bob-line)] px-3 py-1.5"
+                    onClick={() =>
+                      post({
+                        action: "set_admin_status",
+                        adminId: a.id,
+                        status: a.status === "disabled" ? "active" : "disabled",
+                      })
+                    }
+                  >
+                    {a.status === "disabled" ? "Abilita account" : "Disabilita"}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium mb-2">Moduli</p>
+                <div className="flex flex-wrap gap-2">
+                  {(Object.keys(MODULE_LABELS) as (keyof AdminModules)[]).map(
+                    (key) => (
+                      <label
+                        key={key}
+                        className="flex items-center gap-1.5 text-xs rounded-full border border-[var(--bob-line)] px-2.5 py-1"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!!a.modules[key]}
+                          onChange={(e) =>
+                            post({
+                              action: "update_modules",
+                              adminId: a.id,
+                              modules: { [key]: e.target.checked },
+                            })
+                          }
+                        />
+                        {MODULE_LABELS[key]}
+                      </label>
+                    )
+                  )}
+                </div>
+              </div>
+
+              <div className="text-sm">
+                <p className="font-medium">Robot</p>
+                {a.robots.length === 0 ? (
+                  <p className="text-[var(--bob-muted)]">Nessuno</p>
+                ) : (
+                  <ul className="mt-1 space-y-1">
+                    {a.robots.map((r) => (
+                      <li key={r.id} className="flex flex-wrap gap-2 items-center">
+                        <span>
+                          {r.displayName} · SN {r.serialNumber}{" "}
+                          <code className="text-xs">{r.id}</code>
+                        </span>
+                        <button
+                          type="button"
+                          className="text-xs rounded-full border px-2 py-0.5"
+                          onClick={() =>
+                            post({
+                              action: "set_robot_enabled",
+                              robotId: r.id,
+                              enabled: !r.enabled,
+                            })
+                          }
+                        >
+                          {r.enabled ? "Disabilita robot" : "Abilita robot"}
+                        </button>
+                        <button
+                          type="button"
+                          className="bob-btn text-xs rounded-full px-2 py-0.5"
+                          onClick={() => openPairing(r.id)}
+                        >
+                          Prepara associazione
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section>
+        <h2 className="font-semibold text-lg mb-3">Tutti i robot</h2>
+        <ul className="space-y-3">
+          {robots.map((r) => (
+            <li
+              key={r.id}
+              className="rounded-2xl bg-white border border-[var(--bob-line)] px-4 py-3"
+            >
+              <p className="font-semibold">
+                {r.displayName}{" "}
+                <span className="text-sm font-normal text-[var(--bob-muted)]">
+                  SN {r.serialNumber} · {r.enabled ? "ON" : "OFF"}
+                </span>
+              </p>
+              <p className="text-xs mt-1 break-all">
+                API key: <code>{r.apiKey}</code>
+              </p>
+              <p className="text-sm text-[var(--bob-muted)] mt-1">
+                Admin:{" "}
+                {r.admins
+                  .map((a) => a.companyName || a.name)
+                  .join(", ") || "—"}
+              </p>
+              <button
+                type="button"
+                className="bob-btn mt-2 text-sm rounded-full px-4 py-1.5"
+                onClick={() => openPairing(r.id)}
+              >
+                Prepara associazione
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {pairOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(24, 24, 24, 0.5)" }}
+        >
+          <div className="bob-dialog rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-xl border border-[var(--bob-line)]">
+            <div className="flex justify-between gap-3 items-start">
+              <div>
+                <h3 className="font-semibold text-lg">Associa il robot</h3>
+                <p className="text-sm text-[var(--bob-muted)]">{pairTitle}</p>
+              </div>
+              <button
+                type="button"
+                className="text-sm rounded-full border border-[var(--bob-line)] px-3 py-1"
+                onClick={() => setPairOpen(false)}
+              >
+                Chiudi
+              </button>
+            </div>
+            {pairLoading ? (
+              <p className="text-sm text-[var(--bob-muted)]">Generazione codice…</p>
+            ) : (
+              <>
+                <p className="text-sm">Numero di serie</p>
+                <p className="text-2xl font-mono font-bold tracking-wide">
+                  {pairSerial}
+                </p>
+                <p className="text-sm pt-2">Codice da inserire sul robot (15 minuti)</p>
+                <p className="text-5xl font-bold tracking-[0.25em] text-center py-2">
+                  {pairCode}
+                </p>
+                {pairUntil ? (
+                  <p className="text-xs text-[var(--bob-muted)]">
+                    Valido fino a {new Date(pairUntil).toLocaleTimeString("it-IT")}
+                  </p>
+                ) : null}
+                <p className="text-sm text-[var(--bob-muted)]">
+                  Sull&apos;app: Associa robot → conferma il seriale → inserisci
+                  questo codice → Collega. Non serve scansionare nulla.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}

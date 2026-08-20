@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bob_cream"
+    android:orientation="vertical"
+    android:padding="@dimen/screen_padding"
+    tools:context=".ui.AccessControlFragment">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:letterSpacing="-0.03"
+        android:text="@string/access_title"
+        android:textColor="@color/bob_black"
+        android:textSize="@dimen/text_title"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/text_access_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="@string/access_hint"
+        android:textColor="@color/bob_muted"
+        android:textSize="@dimen/text_body" />
+
+    <EditText
+        android:id="@+id/input_first_name"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/input_height"
+        android:layout_marginTop="14dp"
+        android:background="@drawable/bg_panel_round"
+        android:hint="@string/access_first"
+        android:inputType="textPersonName"
+        android:paddingHorizontal="16dp"
+        android:textColor="@color/bob_black"
+        android:textColorHint="@color/bob_muted"
+        android:textSize="@dimen/text_body" />
+
+    <EditText
+        android:id="@+id/input_last_name"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/input_height"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_panel_round"
+        android:hint="@string/access_last"
+        android:inputType="textPersonName"
+        android:paddingHorizontal="16dp"
+        android:textColor="@color/bob_black"
+        android:textColorHint="@color/bob_muted"
+        android:textSize="@dimen/text_body" />
+
+    <Button
+        android:id="@+id/btn_check_in"
+        style="@style/BuddyButton.Primary"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/btn_height_secondary"
+        android:layout_marginTop="12dp"
+        android:text="@string/access_enter" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/access_inside"
+        android:textColor="@color/bob_black"
+        android:textSize="@dimen/text_subtitle"
+        android:textStyle="bold" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/list_inside"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        android:layout_weight="1" />
+
+    <Button
+        android:id="@+id/btn_back"
+        style="@style/BuddyButton"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/btn_height_secondary"
+        android:layout_marginTop="8dp"
+        android:text="@string/back" />
+</LinearLayout>

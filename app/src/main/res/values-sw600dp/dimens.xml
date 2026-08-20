@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="text_title">32sp</dimen>
+    <dimen name="text_subtitle">20sp</dimen>
+    <dimen name="text_body">18sp</dimen>
+    <dimen name="text_small">15sp</dimen>
+    <dimen name="text_label">13sp</dimen>
+    <dimen name="btn_height_primary">72dp</dimen>
+    <dimen name="btn_height_secondary">56dp</dimen>
+    <dimen name="btn_text">20sp</dimen>
+    <dimen name="btn_text_primary">22sp</dimen>
+    <dimen name="screen_padding">32dp</dimen>
+    <dimen name="menu_item_height">80dp</dimen>
+    <dimen name="menu_item_text">20sp</dimen>
+    <dimen name="face_size">240dp</dimen>
+    <dimen name="logo_size">56dp</dimen>
+    <dimen name="input_height">56dp</dimen>
+    <dimen name="greeting_text">40sp</dimen>
+</resources>
