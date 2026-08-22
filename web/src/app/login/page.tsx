@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@bobrobotics.com");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -48,6 +48,7 @@ export default function LoginPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           type="email"
+          autoComplete="email"
           required
         />
 
@@ -57,6 +58,7 @@ export default function LoginPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           type="password"
+          autoComplete="current-password"
           required
         />
 
@@ -69,12 +71,6 @@ export default function LoginPage() {
         >
           {loading ? "Accesso…" : "Entra"}
         </button>
-
-        <div className="mt-6 text-xs text-[var(--bob-muted)] space-y-1">
-          <p>Super: super@bobrobotics.com / super123</p>
-          <p>Admin (già attivo): admin@bobrobotics.com / admin123</p>
-          <p>Utente: mario@example.com / user123</p>
-        </div>
       </form>
     </main>
   );

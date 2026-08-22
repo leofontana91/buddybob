@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { prisma } from "./db";
+import { getAuthSecret } from "./auth-secret";
 
 const COOKIE = "bob_admin_session";
 
@@ -15,9 +16,7 @@ export type SessionPayload = {
 };
 
 function secret() {
-  return new TextEncoder().encode(
-    process.env.AUTH_SECRET ?? "buddybob-dev-secret-change-me"
-  );
+  return getAuthSecret();
 }
 
 export async function createSession(payload: SessionPayload) {

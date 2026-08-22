@@ -3,8 +3,15 @@ import { setHours, setMinutes, startOfDay } from "date-fns";
 import { prisma } from "@/lib/db";
 import { stringifyModules, DEFAULT_ADMIN_MODULES } from "@/lib/modules";
 
-/** Creates demo accounts/robot only when the database is empty. */
+/** Creates demo accounts/robot only when the database is empty (dev/local only). */
 export async function ensureSeedIfEmpty() {
+  if (
+    process.env.NODE_ENV === "production" &&
+    process.env.ALLOW_DEMO_SEED !== "true"
+  ) {
+    return { seeded: false, skipped: true as const };
+  }
+
   const count = await prisma.account.count();
   if (count > 0) return { seeded: false };
 
