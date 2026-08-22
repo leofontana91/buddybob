@@ -11,10 +11,13 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
-  try {
-    await ensureSeedIfEmpty();
-  } catch (e) {
-    console.error("ensureSeedIfEmpty failed", e);
+  // Seed runs at build time (scripts/seed-if-empty.ts), not on every login
+  if (process.env.NODE_ENV !== "production") {
+    try {
+      await ensureSeedIfEmpty();
+    } catch (e) {
+      console.error("ensureSeedIfEmpty failed", e);
+    }
   }
 
   const parsed = schema.safeParse(await req.json());

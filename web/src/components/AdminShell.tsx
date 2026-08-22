@@ -83,7 +83,7 @@ export function AdminShell({
       setUnread(data.unreadCount ?? 0);
     }
     poll();
-    const t = setInterval(poll, 3000);
+    const t = setInterval(poll, 15000);
     return () => {
       alive = false;
       clearInterval(t);
