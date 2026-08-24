@@ -173,6 +173,8 @@ export async function createSignedUploadUrl(params: {
     path: data.path || objectPath,
   };
 }
+
+export function sha256Hex(bytes: Uint8Array): string {
   return crypto.createHash("sha256").update(bytes).digest("hex");
 }
 
