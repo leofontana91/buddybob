@@ -34,11 +34,11 @@ http://localhost:3000
 Il Super Admin può caricare un nuovo APK nella sezione "Aggiornamenti Android".
 Il robot controllerà un manifest endpoint autenticato via `Authorization: Bearer <robot.apiKey>`.
 
-Env vars (server-side, necessari per Supabase Storage):
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `SUPABASE_ANDROID_APK_BUCKET` (bucket Storage per gli APK, privato)
-- `ANDROID_UPDATE_SIGNED_URL_TTL_SEC` (opzionale, default: `3600`)
+Env vars Storage:
+- `SUPABASE_URL` o `NEXT_PUBLIC_SUPABASE_URL` (di solito già iniettate dall’integrazione Vercel)
+- `SUPABASE_SERVICE_ROLE_KEY` o `SUPABASE_SECRET_KEY` (stesso, già iniettate)
+- `SUPABASE_ANDROID_APK_BUCKET` opzionale (default: `bob-android-apks`)
 
-Su Supabase → Storage crea un bucket privato con quel nome (es. `bob-android-apks`).
-L’APK viene caricato dal browser verso Storage (Vercel non accetta file > ~4,5 MB).
+Su **Supabase → Storage** crea una volta un bucket **privato** chiamato `bob-android-apks`.
+Le tabelle Prisma (`RobotAndroidRelease`, ecc.) si aggiornano da sole al deploy (`prisma db push`).
+L’integrazione **non** crea i bucket Storage.

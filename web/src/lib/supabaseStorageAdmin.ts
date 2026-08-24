@@ -9,24 +9,33 @@ function requireEnv(name: string, value: string | undefined) {
   return value;
 }
 
+function firstEnv(...names: string[]): string | undefined {
+  for (const name of names) {
+    const v = process.env[name]?.trim();
+    if (v) return v;
+  }
+  return undefined;
+}
+
 function supabaseUrl(): string {
-  return requireEnv("SUPABASE_URL", process.env.SUPABASE_URL);
+  return requireEnv(
+    "SUPABASE_URL",
+    firstEnv("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL")
+  );
 }
 
 function supabaseServiceRoleKey(): string {
-  // IMPORTANT: only used server-side (Next route). Never send this value to the client.
+  // Vercel↔Supabase: older integration uses SERVICE_ROLE_KEY,
+  // Marketplace often injects SUPABASE_SECRET_KEY.
   return requireEnv(
-    "SUPABASE_SERVICE_ROLE_KEY",
-    process.env.SUPABASE_SERVICE_ROLE_KEY
+    "SUPABASE_SERVICE_ROLE_KEY / SUPABASE_SECRET_KEY",
+    firstEnv("SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SECRET_KEY")
   );
 }
 
 function androidApkBucket(): string {
-  // Supabase Storage bucket containing Android APK objects.
-  // Example: "bob-android-apks"
-  return requireEnv(
-    "SUPABASE_ANDROID_APK_BUCKET",
-    process.env.SUPABASE_ANDROID_APK_BUCKET
+  return (
+    firstEnv("SUPABASE_ANDROID_APK_BUCKET") ?? "bob-android-apks"
   );
 }
 
