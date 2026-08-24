@@ -10,6 +10,7 @@ import com.ainirobot.coreservice.client.RobotApi
 import com.ainirobot.coreservice.client.speech.SkillApi
 import com.buddybob.robot.config.ConfigRepository
 import com.buddybob.robot.platform.CommandPoller
+import com.buddybob.robot.platform.VoiceRouter
 import com.buddybob.robot.robot.BuddyModuleCallback
 import com.buddybob.robot.robot.BuddySpeechCallback
 import com.buddybob.robot.robot.RobotFacade
@@ -31,6 +32,7 @@ class BuddybobApp : Application() {
     private var skillApi: SkillApi? = null
     private val moduleCallback = BuddyModuleCallback()
     private val speechCallback = BuddySpeechCallback()
+    private val voiceRouter = VoiceRouter()
     private val apiThread = HandlerThread("BuddybobRobotApi").also { it.start() }
 
     override fun onCreate() {
@@ -50,6 +52,7 @@ class BuddybobApp : Application() {
 
             override fun onFinal(text: String) {
                 robot.log("ASR final: $text")
+                voiceRouter.onAsrFinal(text)
             }
 
             override fun onVolume(volume: Int) = Unit
@@ -124,6 +127,9 @@ class BuddybobApp : Application() {
             override fun handleApiConnected() {
                 api.registerCallBack(speechCallback)
                 robot.onSpeechReady(true)
+                if (config.current.modules.speech) {
+                    robot.speech.setListeningDesired(true)
+                }
                 Log.i(TAG, "SkillApi connected")
             }
 

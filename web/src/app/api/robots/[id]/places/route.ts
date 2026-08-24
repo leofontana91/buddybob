@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authenticateRobotRequest } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import {
+  loadPlaceContentBundle,
+  ownContentFromRow,
+  resolvedFieldsForPlace,
+} from "@/lib/placeContentServer";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -25,25 +30,27 @@ export async function GET(req: Request, ctx: Ctx) {
   if (!robot) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const places = await prisma.mapPlace.findMany({
-    where: { robotId: id },
-    orderBy: { name: "asc" },
-  });
+  const { places, mode, shared, groupById } = await loadPlaceContentBundle(id);
   return NextResponse.json({
-    places: places.map((p) => ({
-      name: p.name,
-      label: p.label,
-      x: p.x,
-      y: p.y,
-      theta: p.theta,
-      speakOnDepart: p.speakOnDepart,
-      speakWhileMoving: p.speakWhileMoving,
-      speakOnArrive: p.speakOnArrive,
-      displayOnDepart: p.displayOnDepart,
-      displayWhileMoving: p.displayWhileMoving,
-      displayOnArrive: p.displayOnArrive,
-      waitSeconds: p.waitSeconds,
-    })),
+    places: places.map((p) => {
+      const label = (p.label || p.name).trim();
+      const resolved = resolvedFieldsForPlace({
+        mode,
+        shared,
+        group: p.groupId ? groupById.get(p.groupId) ?? null : null,
+        own: ownContentFromRow(p),
+        label,
+      });
+      return {
+        name: p.name,
+        label: p.label,
+        x: p.x,
+        y: p.y,
+        theta: p.theta,
+        waitSeconds: p.waitSeconds,
+        ...resolved,
+      };
+    }),
   });
 }
 

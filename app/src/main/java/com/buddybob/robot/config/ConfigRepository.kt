@@ -4,7 +4,10 @@ import android.content.Context
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 /**
  * Loads / caches BOB config.
@@ -25,6 +28,11 @@ class ConfigRepository(private val context: Context) {
     @Volatile
     var pairing: RobotPairing? = null
         private set
+
+    private val http = OkHttpClient.Builder()
+        .connectTimeout(8, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
+        .build()
 
     fun load(): BobConfig {
         pairing = readPairing()
@@ -97,10 +105,48 @@ class ConfigRepository(private val context: Context) {
         return p
     }
 
-    fun refreshFromNetwork(): RefreshResult {
-        return RefreshResult.NotImplemented(
-            "Usa Impostazioni → Aggiorna, oppure pairing QR."
-        )
+    /**
+     * Scarica la config dal web (moduli, frasi, PIN, pulsanti menu).
+     * Non serve un APK nuovo: i moduli si aggiornano da qui.
+     */
+    fun refreshFromNetwork(force: Boolean = false): RefreshResult {
+        val p = pairing
+        if (p == null) {
+            return RefreshResult.Failed("Robot non associato")
+        }
+        val since = if (force) 0 else current.configVersion
+        val url =
+            "${p.endpoint.trimEnd('/')}/api/robots/${p.robotId}/config?since=$since"
+        return try {
+            val req = Request.Builder()
+                .url(url)
+                .header("Authorization", "Bearer ${p.apiKey}")
+                .get()
+                .build()
+            http.newCall(req).execute().use { response ->
+                when (response.code) {
+                    204 -> RefreshResult.Unchanged(current.configVersion)
+                    200 -> {
+                        val text = response.body?.string().orEmpty()
+                        val remote = gson.fromJson(text, BobConfig::class.java)
+                            ?: return RefreshResult.Failed("Config vuota")
+                        val standby = current.reception.standbyPlace
+                        saveLocal(
+                            remote.copy(
+                                reception = remote.reception.copy(standbyPlace = standby)
+                            )
+                        )
+                        Log.i(TAG, "Remote config v${current.configVersion}")
+                        RefreshResult.Updated(current)
+                    }
+                    401 -> RefreshResult.Failed("Non autorizzato")
+                    else -> RefreshResult.Failed("HTTP ${response.code}")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "refresh failed: ${e.message}")
+            RefreshResult.Failed(e.message ?: "rete")
+        }
     }
 
     private fun applyPairing(base: BobConfig, p: RobotPairing?): BobConfig {
@@ -153,7 +199,6 @@ class ConfigRepository(private val context: Context) {
         data class Updated(val config: BobConfig) : RefreshResult()
         data class Unchanged(val configVersion: Int) : RefreshResult()
         data class Failed(val message: String) : RefreshResult()
-        data class NotImplemented(val message: String) : RefreshResult()
     }
 
     companion object {

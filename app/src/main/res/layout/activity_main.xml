@@ -1,9 +1,53 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/container_content"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bob_cream"
-    xmlns:tools="http://schemas.android.com/tools"
-    tools:context=".MainActivity"
-    tools:layout="@layout/fragment_home" />
+    tools:context=".MainActivity">
+
+    <FrameLayout
+        android:id="@+id/container_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:layout="@layout/fragment_home" />
+
+    <FrameLayout
+        android:id="@+id/overlay_place_media"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#E60D2C50"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/overlay_place_image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginBottom="72dp"
+            android:contentDescription="@string/places_title"
+            android:scaleType="fitCenter"
+            android:visibility="gone" />
+
+        <VideoView
+            android:id="@+id/overlay_place_video"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:layout_marginBottom="72dp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/overlay_place_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:gravity="center"
+            android:padding="20dp"
+            android:textColor="@color/bob_white"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+    </FrameLayout>
+</FrameLayout>

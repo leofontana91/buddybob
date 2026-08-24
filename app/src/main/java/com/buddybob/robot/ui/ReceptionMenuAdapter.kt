@@ -26,6 +26,7 @@ class ReceptionMenuAdapter(
     override fun onBindViewHolder(holder: Holder, position: Int) {
         val item = items[position]
         holder.button.text = item.label
+        holder.button.setTextColor(holder.itemView.context.getColor(R.color.bob_navy))
         holder.button.setOnClickListener { onClick(item) }
     }
 

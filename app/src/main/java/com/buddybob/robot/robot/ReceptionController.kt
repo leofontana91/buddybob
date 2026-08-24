@@ -9,8 +9,8 @@ import com.buddybob.robot.config.BobConfig
 import kotlin.math.abs
 
 /**
- * Reception / welcome flow:
- * idle → person detected → look + smile + "Benvenuto" → "Come posso aiutarti?" → menu.
+ * Idle (nobody in front) → person stably in front → welcome + menu.
+ * Back to idle when the guest leaves.
  */
 class ReceptionController(
     private val motion: MotionController,
@@ -26,7 +26,6 @@ class ReceptionController(
 
     var onPhaseChanged: ((Phase) -> Unit)? = null
     var onStatus: ((String) -> Unit)? = null
-    /** Called when a guest is detected — even if no fragment is observing phases. */
     var onGuestDetected: (() -> Unit)? = null
 
     @Volatile
@@ -37,7 +36,16 @@ class ReceptionController(
     private var listening = false
     private var lastGreetingAtMs = 0L
     private var guestPresent = false
+    private var presentSinceMs = 0L
+    private var absentSinceMs = 0L
     private var greetingToken = 0
+    private val pollRunnable = object : Runnable {
+        override fun run() {
+            if (!listening) return
+            pollPersons()
+            mainHandler.postDelayed(this, POLL_MS)
+        }
+    }
 
     fun startListening() {
         if (!BuddybobApp.instance.config.current.modules.reception) {
@@ -49,18 +57,20 @@ class ReceptionController(
         follow.onPersons = { people -> mainHandler.post { onPersons(people) } }
         follow.onStatus = { msg -> onStatus?.invoke(msg) }
         follow.startDetectingPersons()
-        onStatus?.invoke("Reception watching for guests (phase=$phase)")
+        mainHandler.removeCallbacks(pollRunnable)
+        mainHandler.post(pollRunnable)
+        onStatus?.invoke("Reception waiting for guests")
         onPhaseChanged?.invoke(phase)
     }
 
     fun stopListening() {
         if (!listening) return
         listening = false
+        mainHandler.removeCallbacks(pollRunnable)
         follow.stopDetectingPersons()
         follow.onPersons = null
     }
 
-    /** Full stop: leave listening and return to idle. */
     fun release() {
         greetingToken++
         stopListening()
@@ -69,12 +79,19 @@ class ReceptionController(
         setPhase(Phase.IDLE)
     }
 
-    /** Desk / QA: run the greeting without a real PersonApi event. */
     fun simulateGuest() {
         if (!BuddybobApp.instance.config.current.modules.reception) return
         if (!listening) startListening()
         if (phase != Phase.IDLE) return
         beginGreeting(person = null)
+    }
+
+    fun skipGreetingToMenu() {
+        if (phase != Phase.GREETING) return
+        greetingToken++
+        speech.stop()
+        setPhase(Phase.MENU)
+        onStatus?.invoke("Reception menu ready (skipped)")
     }
 
     fun resetToIdle() {
@@ -83,8 +100,11 @@ class ReceptionController(
         runCatching { follow.stopFocusFollow() }
         runCatching { motion.resetHead() }
         lastGreetingAtMs = System.currentTimeMillis()
+        guestPresent = false
+        presentSinceMs = 0L
         setPhase(Phase.IDLE)
         onStatus?.invoke("Reception idle")
+        maybeReturnToStandby()
     }
 
     fun enabledButtons(): List<BobConfig.MenuButton> {
@@ -93,37 +113,57 @@ class ReceptionController(
         return buttons.filter { it.enabled }
     }
 
+    private fun pollPersons() {
+        val max = BuddybobApp.instance.config.current.reception.maxDistanceMeters
+        val people = runCatching { follow.getVisiblePersons(max) }.getOrDefault(emptyList())
+        onPersons(people)
+    }
+
     private fun onPersons(people: List<Person>) {
         if (!listening) return
         val cfg = BuddybobApp.instance.config.current.reception
-        val nearby = people.filter { person ->
-            val distance = person.distance.toDouble()
-            distance in 0.0..cfg.maxDistanceMeters
-        }
+        val nearby = people.filter { inFront(it, cfg.maxDistanceMeters) }
         val present = nearby.isNotEmpty()
+        val now = System.currentTimeMillis()
 
-        if (!present) {
-            if (guestPresent && phase == Phase.MENU) {
-                guestPresent = false
-                mainHandler.postDelayed({
-                    if (listening && phase == Phase.MENU && !guestPresent) {
-                        resetToIdle()
-                    }
-                }, (cfg.cooldownSec * 1000L).coerceAtLeast(5_000L))
-            } else {
-                guestPresent = false
+        if (present) {
+            absentSinceMs = 0L
+            if (!guestPresent) {
+                guestPresent = true
+                presentSinceMs = now
+            }
+            if (phase == Phase.IDLE && now - presentSinceMs >= PRESENCE_MS) {
+                if (now - lastGreetingAtMs < REGREET_MS) return
+                val best = nearby.minByOrNull { abs(it.angle.toDouble()) } ?: nearby.first()
+                beginGreeting(best)
             }
             return
         }
 
-        guestPresent = true
-        if (phase != Phase.IDLE) return
+        if (guestPresent) {
+            guestPresent = false
+            absentSinceMs = now
+        }
+        presentSinceMs = 0L
+        if (absentSinceMs == 0L) return
+        if (now - absentSinceMs < ABSENCE_MS) return
 
-        val now = System.currentTimeMillis()
-        if (now - lastGreetingAtMs < cfg.cooldownSec * 1000L) return
+        when (phase) {
+            Phase.GREETING -> {
+                greetingToken++
+                speech.stop()
+                resetToIdle()
+            }
+            Phase.MENU -> resetToIdle()
+            Phase.IDLE -> Unit
+        }
+    }
 
-        val best = nearby.minByOrNull { abs(it.angle.toDouble()) } ?: nearby.first()
-        beginGreeting(best)
+    private fun inFront(person: Person, maxDistance: Double): Boolean {
+        val distance = person.distance.toDouble()
+        if (distance <= 0.2 || distance > maxDistance) return false
+        if (abs(person.angle.toDouble()) > 45.0) return false
+        return true
     }
 
     private fun beginGreeting(person: Person?) {
@@ -136,9 +176,18 @@ class ReceptionController(
         lookAtGuest(person)
 
         val phrases = BuddybobApp.instance.config.current.phrases
+        mainHandler.postDelayed({
+            if (token != greetingToken) return@postDelayed
+            if (phase == Phase.GREETING) {
+                setPhase(Phase.MENU)
+                onStatus?.invoke("Reception menu ready (TTS timeout)")
+            }
+        }, GREETING_FALLBACK_MS)
+
         speech.speak(phrases.welcome) {
             mainHandler.post(welcomeDone@{
                 if (token != greetingToken) return@welcomeDone
+                if (phase != Phase.GREETING) return@welcomeDone
                 speech.speak(phrases.howCanIHelp) {
                     mainHandler.post(helpDone@{
                         if (token != greetingToken) return@helpDone
@@ -154,7 +203,6 @@ class ReceptionController(
         val cfg = BuddybobApp.instance.config.current
         val vertical = cfg.reception.raiseHeadVertical.coerceIn(0, 90)
 
-        // Release chassis before taking focus-follow ownership
         runCatching {
             val robot = BuddybobApp.instance.robot
             robot.navigation.stopNavigation()
@@ -204,6 +252,14 @@ class ReceptionController(
         }
     }
 
+    private fun maybeReturnToStandby() {
+        val place = BuddybobApp.instance.config.current.reception.standbyPlace.trim()
+        if (place.isBlank()) return
+        runCatching {
+            BuddybobApp.instance.robot.navigation.startNavigation(place)
+        }
+    }
+
     private fun setPhase(next: Phase) {
         if (phase == next) {
             mainHandler.post { onPhaseChanged?.invoke(next) }
@@ -215,5 +271,10 @@ class ReceptionController(
 
     companion object {
         private const val TAG = "ReceptionController"
+        private const val GREETING_FALLBACK_MS = 6_000L
+        private const val POLL_MS = 400L
+        private const val PRESENCE_MS = 800L
+        private const val ABSENCE_MS = 4_000L
+        private const val REGREET_MS = 2_500L
     }
 }

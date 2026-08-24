@@ -62,6 +62,8 @@
     "cooldownSec": 45,
     "maxDistanceMeters": 3.0,
     "raiseHeadVertical": 35,
+    "settingsPin": "1234",
+    "standbyPlace": "reception",
     "buttons": [
       { "id": "goTo", "label": "Vai a…", "enabled": true },
       { "id": "appointments", "label": "Appuntamenti", "enabled": true },

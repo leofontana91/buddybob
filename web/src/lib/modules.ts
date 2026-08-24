@@ -47,6 +47,32 @@ export const MODULE_LABELS: Record<keyof AdminModules, string> = {
   settings: "Impostazioni tecniche",
 };
 
+/** Admin pages that configure a module. */
+export const MODULE_ADMIN_HREF: Partial<Record<keyof AdminModules, string>> = {
+  reception: "/admin/modules/reception",
+  appointments: "/admin/modules/appointments",
+  goTo: "/admin/modules/goto",
+  documents: "/admin/documents",
+  accessControl: "/admin/access",
+  speech: "/admin/modules/speech",
+  callOperator: "/admin/modules/operator",
+  games: "/admin/modules/games",
+  follow: "/admin/modules/follow",
+  motion: "/admin/modules/motion",
+  voiceMemos: "/admin/modules/memos",
+  charge: "/admin/modules/charge",
+};
+
+export function enabledModuleLinks(modules: AdminModules) {
+  return (Object.keys(MODULE_ADMIN_HREF) as (keyof AdminModules)[])
+    .filter((key) => modules[key])
+    .map((key) => ({
+      key,
+      href: MODULE_ADMIN_HREF[key] as string,
+      label: MODULE_LABELS[key],
+    }));
+}
+
 export function parseModules(json: string | null | undefined): AdminModules {
   try {
     const raw = json ? JSON.parse(json) : {};

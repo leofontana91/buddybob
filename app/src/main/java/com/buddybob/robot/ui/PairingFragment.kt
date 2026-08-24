@@ -98,6 +98,9 @@ class PairingFragment : Fragment() {
                     api.pairBySerial(endpoint, serial, code)
                 }
                 BuddybobApp.instance.config.savePairing(pairing)
+                withContext(Dispatchers.IO) {
+                    BuddybobApp.instance.config.refreshFromNetwork(force = true)
+                }
                 fillFromCurrent()
                 inputCode.setText("")
                 Toast.makeText(requireContext(), R.string.pairing_saved, Toast.LENGTH_LONG).show()

@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bob_cream"
+    android:fillViewport="true"
+    android:padding="@dimen/screen_padding"
+    tools:context=".ui.RobotSettingsFragment">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/robot_settings"
+            android:textColor="@color/bob_navy"
+            android:textSize="@dimen/text_title"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/text_settings_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="@color/bob_navy"
+            android:textSize="@dimen/text_small"
+            tools:text="Robot associato" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/robot_settings_standby"
+            android:textColor="@color/bob_navy"
+            android:textSize="@dimen/text_subtitle"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/robot_settings_standby_hint"
+            android:textColor="@color/bob_muted"
+            android:textSize="@dimen/text_small" />
+
+        <Spinner
+            android:id="@+id/spinner_standby"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/input_height"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_panel_round" />
+
+        <Button
+            android:id="@+id/btn_save_standby"
+            style="@style/BuddyButton.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/btn_height_secondary"
+            android:text="@string/robot_settings_save_standby" />
+
+        <Button
+            android:id="@+id/btn_go_standby"
+            style="@style/BuddyButton"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/btn_height_secondary"
+            android:text="@string/robot_settings_go_standby" />
+
+        <Button
+            android:id="@+id/btn_settings_refresh"
+            style="@style/BuddyButton"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/btn_height_secondary"
+            android:text="@string/robot_settings_refresh" />
+
+        <Button
+            android:id="@+id/btn_settings_pair"
+            style="@style/BuddyButton"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/btn_height_secondary"
+            android:text="@string/pairing_menu" />
+
+        <Button
+            android:id="@+id/btn_settings_tech"
+            style="@style/BuddyButton"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/btn_height_secondary"
+            android:text="@string/reception_tech" />
+
+        <Button
+            android:id="@+id/btn_settings_simulate"
+            style="@style/BuddyButton"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/btn_height_secondary"
+            android:text="@string/reception_simulate" />
+
+        <Button
+            android:id="@+id/btn_settings_idle"
+            style="@style/BuddyButton"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/btn_height_secondary"
+            android:text="@string/reception_reset" />
+
+        <Button
+            android:id="@+id/btn_settings_halt"
+            style="@style/BuddyButton.Danger"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/btn_height_secondary"
+            android:text="@string/halt" />
+
+        <Button
+            android:id="@+id/btn_settings_charge"
+            style="@style/BuddyButton"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/btn_height_secondary"
+            android:text="@string/robot_settings_charge" />
+
+        <Button
+            android:id="@+id/btn_settings_back"
+            style="@style/BuddyButton.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/btn_height_secondary"
+            android:layout_marginTop="12dp"
+            android:text="@string/back" />
+    </LinearLayout>
+</ScrollView>

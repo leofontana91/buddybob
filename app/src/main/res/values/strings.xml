@@ -33,8 +33,8 @@
     <string name="status_ready">Pronto</string>
     <string name="status_waiting_robot">In attesa di RobotOS…</string>
 
-    <string name="reception_idle_title">Pronto ad accoglierti</string>
-    <string name="reception_idle_hint">Quando qualcuno si avvicina, BOB saluta e apre il menu.</string>
+    <string name="reception_idle_title">In attesa</string>
+    <string name="reception_idle_hint">Quando qualcuno si ferma davanti, BOB saluta e apre i comandi.</string>
     <string name="reception_simulate">Simula ospite</string>
     <string name="reception_face">Faccia sorridente</string>
     <string name="reception_welcome">Benvenuto</string>
@@ -78,6 +78,25 @@
     <string name="pairing_cleared">Associazione rimossa</string>
     <string name="pairing_error">Associazione non riuscita</string>
     <string name="pairing_menu">Associa robot</string>
+    <string name="robot_settings">Impostazioni</string>
+    <string name="robot_settings_pin_hint">Password</string>
+    <string name="robot_settings_pin_msg">Inserisci la password impostata nel pannello web.</string>
+    <string name="robot_settings_open">Apri</string>
+    <string name="robot_settings_pin_wrong">Password errata</string>
+    <string name="robot_settings_standby">Punto di accoglienza</string>
+    <string name="robot_settings_standby_hint">Quando non c\'è nessuno, BOB può tornare qui.</string>
+    <string name="robot_settings_standby_none">Non impostato</string>
+    <string name="robot_settings_save_standby">Salva punto di accoglienza</string>
+    <string name="robot_settings_go_standby">Vai al punto di accoglienza</string>
+    <string name="robot_settings_no_standby">Scegli e salva un punto</string>
+    <string name="robot_settings_charge">Vai in ricarica</string>
+    <string name="robot_settings_saved">Salvato</string>
+    <string name="robot_settings_paired">Associato: %1$s (%2$s)</string>
+    <string name="robot_settings_refresh">Aggiorna moduli dal web</string>
+    <string name="robot_settings_refresh_ok">Moduli aggiornati</string>
+    <string name="robot_settings_refresh_same">Già aggiornato</string>
+    <string name="robot_settings_refresh_fail">Aggiornamento non riuscito: %1$s</string>
+    <string name="robot_settings_unpaired">Robot non associato</string>
 
     <string name="docs_title">Documenti</string>
     <string name="docs_hint">Scegli il modulo da compilare</string>

@@ -57,15 +57,21 @@ model Robot {
   timezone       String  @default("Europe/Rome")
   locale         String  @default("it-IT")
   createdAt      DateTime @default(now())
+  lastSeenAt     DateTime?
+  lastPlace      String?
+  lastActivity   String?
   settings       RobotSettings?
   appointments   Appointment[]
   operatorAlerts OperatorAlert[]
   adminLinks     AdminRobot[]
   mapPlaces      MapPlace[]
+  placeGroups    PlaceContentGroup[]
   commands       RobotCommand[]
   formTemplates    FormTemplate[]
   accessVisits     AccessVisit[]
   androidReleases  RobotAndroidRelease[]
+  savedPhrases     SavedPhrase[]
+  tasks            RobotTask[]
 }
 
 model AdminRobot {
@@ -88,6 +94,12 @@ model RobotSettings {
   dayStart          String @default("09:00")
   dayEnd            String @default("18:00")
   slotMinutes       Int    @default(30)
+  /// PIN to unlock robot on-device settings
+  settingsPin       String @default("1234")
+  /// shared | per_place | groups — come si configurano frasi e media dei punti mappa
+  placeContentMode  String @default("per_place")
+  /// JSON PlaceContent usato se placeContentMode = shared
+  placeSharedJson   String @default("{}")
 }
 
 model Appointment {
@@ -123,6 +135,22 @@ model OperatorAlert {
   @@index([robotId, createdAt])
 }
 
+/// Gruppo di punti mappa che condividono le stesse frasi/media
+model PlaceContentGroup {
+  id          String     @id @default(cuid())
+  robotId     String
+  robot       Robot      @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  name        String
+  /// JSON PlaceContent
+  contentJson String     @default("{}")
+  sortOrder   Int        @default(0)
+  places      MapPlace[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([robotId])
+}
+
 /// Punti mappa sincronizzati dal robot (Vai a…)
 model MapPlace {
   id        String   @id @default(cuid())
@@ -140,7 +168,7 @@ model MapPlace {
   speakWhileMoving String?
   /// Cosa dice quando arriva
   speakOnArrive   String?
-  /// Cosa mostra sul monitor quando parte
+  /// Cosa mostra sul monitor quando parte (testo o JSON { text, media })
   displayOnDepart String?
   /// Cosa mostra sul monitor mentre si muove
   displayWhileMoving String?
@@ -148,17 +176,20 @@ model MapPlace {
   displayOnArrive String?
   /// Secondi di attesa al punto prima di proseguire (0 = non aspettare)
   waitSeconds     Int     @default(0)
+  groupId         String?
+  group           PlaceContentGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
   updatedAt DateTime @updatedAt
 
   @@unique([robotId, name])
+  @@index([groupId])
 }
 
-/// Coda comandi dal web verso il robot (goto / speak / stop)
+/// Coda comandi dal web verso il robot (goto / speak / stop / task)
 model RobotCommand {
   id        String    @id @default(cuid())
   robotId   String
   robot     Robot     @relation(fields: [robotId], references: [id], onDelete: Cascade)
-  /// goto | speak | stop
+  /// goto | speak | stop | task
   type      String
   payload   String    @default("{}")
   /// pending | running | done | failed
@@ -168,6 +199,30 @@ model RobotCommand {
   ackedAt   DateTime?
 
   @@index([robotId, status, createdAt])
+}
+
+model SavedPhrase {
+  id        String   @id @default(cuid())
+  robotId   String
+  robot     Robot    @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  text      String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([robotId, sortOrder])
+}
+
+model RobotTask {
+  id        String   @id @default(cuid())
+  robotId   String
+  robot     Robot    @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  name      String
+  /// JSON array of steps: speak | button | goto | return | wait
+  steps     String   @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([robotId])
 }
 
 model FormTemplate {

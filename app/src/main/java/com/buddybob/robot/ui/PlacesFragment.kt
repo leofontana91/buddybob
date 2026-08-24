@@ -152,28 +152,54 @@ class PlacesFragment : Fragment() {
 
             for ((i, place) in route.withIndex()) {
                 if (!routeRunning) break
-                val label = config.placeLabel(place.name)
+                val extra = BuddybobApp.instance.robot.placeContent.get(place.name)
+                val label = extra?.labelOrName() ?: config.placeLabel(place.name)
+                val going = extra?.speakDepart(config.phraseGoingTo(label))
+                    ?: config.phraseGoingTo(label)
 
                 mainHandler.post {
                     status.text = getString(R.string.places_going, label)
+                    (activity as? MainActivity)?.showPlaceDisplay(
+                        extra?.displayOnDepart,
+                        extra?.mediaOnDepart
+                    )
                 }
 
-                speech.speak(config.phraseGoingTo(label))
+                speech.speak(going)
 
                 withContext(Dispatchers.Main) {
                     nav.startNavigation(place.name)
                 }
 
-                // Wait for navigation to finish (poll-based)
+                extra?.speakWhileMoving?.trim()?.takeIf { it.isNotBlank() }?.let {
+                    speech.speak(it)
+                }
+                mainHandler.post {
+                    if (!extra?.displayWhileMoving.isNullOrBlank() || extra?.mediaWhileMoving != null) {
+                        (activity as? MainActivity)?.showPlaceDisplay(
+                            extra?.displayWhileMoving,
+                            extra?.mediaWhileMoving
+                        )
+                    }
+                }
+
                 waitForNavigation()
 
                 if (!routeRunning) break
 
                 mainHandler.post {
                     status.text = getString(R.string.places_arriving, label)
+                    (activity as? MainActivity)?.showPlaceDisplay(
+                        extra?.displayOnArrive,
+                        extra?.mediaOnArrive
+                    )
                 }
                 speech.speak(
-                    config.current.phrases.format(
+                    extra?.speakArrive(
+                        config.current.phrases.format(
+                            config.current.phrases.arrived, "place" to label
+                        )
+                    ) ?: config.current.phrases.format(
                         config.current.phrases.arrived, "place" to label
                     )
                 )
@@ -207,6 +233,7 @@ class PlacesFragment : Fragment() {
                 status.text = getString(R.string.places_route_done)
                 btnStart.isEnabled = true
                 placesAdapter.clearSelection()
+                (activity as? MainActivity)?.hidePlaceDisplay()
             }
         }
     }
@@ -233,6 +260,7 @@ class PlacesFragment : Fragment() {
     private fun stopRoute() {
         routeRunning = false
         runCatching { BuddybobApp.instance.robot.haltAllMotion() }
+        (activity as? MainActivity)?.hidePlaceDisplay()
         status.text = getString(R.string.places_stop)
         btnStart.isEnabled = true
     }
@@ -250,6 +278,8 @@ class PlacesFragment : Fragment() {
                 PlatformApi().syncPlaces(
                     places.map { PlatformApi.PlaceSync(it.name, it.x, it.y, it.theta) }
                 )
+                val configs = PlatformApi().fetchPlaceConfigs()
+                BuddybobApp.instance.robot.placeContent.replaceAll(configs)
             }
         }
     }

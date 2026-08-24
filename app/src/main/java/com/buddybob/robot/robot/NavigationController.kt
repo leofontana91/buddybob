@@ -13,6 +13,12 @@ import org.json.JSONObject
 class NavigationController {
 
     var onStatus: ((String) -> Unit)? = null
+    @Volatile
+    var lastDestination: String? = null
+        private set
+    @Volatile
+    var lastStatusText: String = ""
+        private set
 
     fun isEstimate(callback: (Boolean) -> Unit) {
         RobotApi.getInstance().isRobotEstimate(ReqId.next(), object : CommandListener() {
@@ -85,6 +91,8 @@ class NavigationController {
         coordinateDeviation: Double = 0.5,
         avoidTimeoutMs: Long = 20_000L
     ) {
+        lastDestination = destName
+        lastStatusText = ""
         try {
             RobotApi.getInstance().startNavigation(
                 ReqId.next(),
@@ -157,13 +165,15 @@ class NavigationController {
     private fun statusListener(label: String) = object : CommandListener() {
         override fun onResult(result: Int, message: String?) {
             onStatus?.invoke("$label: $message")
+            lastStatusText = "$label: $message"
         }
     }
 
     private fun navigationListener() = object : ActionListener() {
         @Throws(RemoteException::class)
         override fun onResult(status: Int, response: String?) {
-            onStatus?.invoke("nav result status=$status response=$response")
+            lastStatusText = "nav result status=$status response=$response"
+            onStatus?.invoke(lastStatusText)
         }
 
         @Throws(RemoteException::class)
@@ -177,11 +187,13 @@ class NavigationController {
                 Definition.ACTION_RESPONSE_REQUEST_RES_ERROR -> "Chassis busy"
                 else -> "Nav error $errorCode: $errorString"
             }
+            lastStatusText = msg
             onStatus?.invoke(msg)
         }
 
         override fun onStatusUpdate(status: Int, data: String?, extraData: String?) {
-            onStatus?.invoke("nav status=$status data=$data")
+            lastStatusText = "nav status=$status data=$data"
+            onStatus?.invoke(lastStatusText)
         }
     }
 

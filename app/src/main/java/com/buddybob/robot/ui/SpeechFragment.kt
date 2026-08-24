@@ -5,14 +5,16 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.EditText
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.buddybob.robot.BuddybobApp
 import com.buddybob.robot.MainActivity
 import com.buddybob.robot.R
 
+/** Ascolto comandi vocali (apri moduli, vai a, ferma…). */
 class SpeechFragment : Fragment() {
+
+    private lateinit var feedback: TextView
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -21,32 +23,34 @@ class SpeechFragment : Fragment() {
     ): View {
         val root = inflater.inflate(R.layout.fragment_speech, container, false)
         val speech = BuddybobApp.instance.robot.speech
-        val input = root.findViewById<EditText>(R.id.edit_tts)
-        val feedback = root.findViewById<TextView>(R.id.text_feedback)
-        speech.onTtsState = { feedback.text = it }
+        feedback = root.findViewById(R.id.text_feedback)
+        speech.onTtsState = { feedback.append("\n$it") }
 
-        root.findViewById<Button>(R.id.btn_speak).setOnClickListener {
-            val text = input.text?.toString().orEmpty().ifBlank {
-                getString(R.string.default_tts)
-            }
-            speech.speak(text)
-        }
+        feedback.text =
+            "Dimmi ad esempio:\n«Apri appuntamenti»\n«Accompagnami in reception»\n«Chiama un operatore»\n«Ferma»\n«Torna al menu»"
+
+        root.findViewById<Button>(R.id.btn_speak).visibility = View.GONE
+        root.findViewById<View>(R.id.edit_tts).visibility = View.GONE
         root.findViewById<Button>(R.id.btn_stop_tts).setOnClickListener {
             speech.stop()
         }
         root.findViewById<Button>(R.id.btn_asr_on).setOnClickListener {
-            speech.setRecognizable(true)
-            speech.setContinuousRecognition(true)
-            feedback.text = "Recognition ON (continuous)"
+            speech.setListeningDesired(true)
+            feedback.append("\nAscolto attivo")
         }
         root.findViewById<Button>(R.id.btn_asr_off).setOnClickListener {
-            speech.setRecognizable(false)
-            feedback.text = "Recognition OFF"
+            speech.setListeningDesired(false)
+            feedback.append("\nAscolto spento")
         }
         root.findViewById<Button>(R.id.btn_back).setOnClickListener {
             (activity as? MainActivity)?.openReceptionOrHome()
         }
         return root
+    }
+
+    override fun onResume() {
+        super.onResume()
+        BuddybobApp.instance.robot.speech.setListeningDesired(true)
     }
 
     companion object {

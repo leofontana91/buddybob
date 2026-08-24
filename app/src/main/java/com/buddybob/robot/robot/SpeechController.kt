@@ -11,7 +11,26 @@ class SpeechController {
 
     var onTtsState: ((String) -> Unit)? = null
 
+    @Volatile
+    var listeningDesired: Boolean = false
+        private set
+
+    @Volatile
+    private var speaking: Boolean = false
+
     private fun skill(): SkillApi? = BuddybobApp.instance.getSkillApi()
+
+    fun setListeningDesired(enabled: Boolean) {
+        listeningDesired = enabled
+        applyRecognition()
+    }
+
+    private fun applyRecognition() {
+        val api = skill() ?: return
+        val on = listeningDesired && !speaking
+        api.setRecognizable(on)
+        if (on) api.setRecognizeMode(true)
+    }
 
     fun speak(
         text: String,
@@ -21,7 +40,6 @@ class SpeechController {
         val api = skill()
         if (api == null) {
             onTtsState?.invoke("SkillApi not connected")
-            // Still advance UX flows when robot speech is unavailable (desk testing).
             onComplete?.invoke()
             return
         }
@@ -30,8 +48,12 @@ class SpeechController {
         fun finishOnce() {
             if (finished) return
             finished = true
+            speaking = false
+            applyRecognition()
             onComplete?.invoke()
         }
+        speaking = true
+        applyRecognition()
         api.playText(TTSEntity(sid, trimmed), object : TextListener() {
             override fun onStart() {
                 onTtsState?.invoke("TTS start")
@@ -57,6 +79,8 @@ class SpeechController {
 
     fun stop() {
         skill()?.stopTTS()
+        speaking = false
+        applyRecognition()
         onTtsState?.invoke("TTS stopped")
     }
 
@@ -65,7 +89,8 @@ class SpeechController {
     }
 
     fun setRecognizable(enabled: Boolean) {
-        skill()?.setRecognizable(enabled)
+        listeningDesired = enabled
+        applyRecognition()
     }
 
     fun queryByText(text: String) {

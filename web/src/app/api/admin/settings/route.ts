@@ -46,6 +46,7 @@ const patchSchema = z.object({
   dayEnd: z.string().optional(),
   slotMinutes: z.number().int().min(5).max(120).optional(),
   displayName: z.string().optional(),
+  settingsPin: z.string().trim().min(4).max(20).optional(),
 });
 
 export async function PATCH(req: Request) {
@@ -85,6 +86,7 @@ export async function PATCH(req: Request) {
       dayStart: settings.dayStart,
       dayEnd: settings.dayEnd,
       slotMinutes: settings.slotMinutes,
+      settingsPin: settings.settingsPin,
     },
   });
 

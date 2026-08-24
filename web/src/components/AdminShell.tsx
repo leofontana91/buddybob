@@ -11,6 +11,12 @@ import {
   useState,
 } from "react";
 
+import {
+  AdminModules,
+  DEFAULT_ADMIN_MODULES,
+  enabledModuleLinks,
+} from "@/lib/modules";
+
 type Robot = { id: string; displayName: string };
 
 type RobotCtx = {
@@ -18,6 +24,7 @@ type RobotCtx = {
   robotId: string;
   setRobotId: (id: string) => void;
   reloadRobots: () => Promise<void>;
+  modules: AdminModules;
 };
 
 const Ctx = createContext<RobotCtx | null>(null);
@@ -48,12 +55,14 @@ export function AdminShell({
   const [robots, setRobots] = useState<Robot[]>([]);
   const [robotId, setRobotIdState] = useState("");
   const [unread, setUnread] = useState(0);
+  const [modules, setModules] = useState<AdminModules>(DEFAULT_ADMIN_MODULES);
 
   const reloadRobots = useCallback(async () => {
     const res = await fetch("/api/admin/robots");
     if (!res.ok) return;
     const data = await res.json();
     const list: Robot[] = data.robots ?? [];
+    if (data.modules) setModules(data.modules);
     setRobots(list);
     setRobotIdState((prev) => {
       if (prev && list.some((r) => r.id === prev)) return prev;
@@ -93,8 +102,8 @@ export function AdminShell({
   }, [robotId, withRobotSelect]);
 
   const value = useMemo(
-    () => ({ robots, robotId, setRobotId, reloadRobots }),
-    [robots, robotId, setRobotId, reloadRobots]
+    () => ({ robots, robotId, setRobotId, reloadRobots, modules }),
+    [robots, robotId, setRobotId, reloadRobots, modules]
   );
 
   async function logout() {
@@ -115,7 +124,7 @@ export function AdminShell({
     <Ctx.Provider value={value}>
       <div className="min-h-screen">
         <header className="border-b border-[var(--bob-line)] bg-white">
-          <div className="mx-auto max-w-5xl px-4 py-4 flex flex-wrap items-center justify-between gap-4">
+          <div className="mx-auto max-w-6xl px-4 py-4 flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-xs tracking-[0.18em] uppercase text-[var(--bob-navy)] font-semibold">
                 BOB · {roleLabel}
@@ -136,20 +145,18 @@ export function AdminShell({
                   ))}
                 </select>
               ) : null}
-              <nav className="flex items-center gap-1">
+              <nav className="flex flex-wrap items-center gap-1">
                 {links.map((l) => {
                   const active =
-                    l.href === links[0]?.href
-                      ? pathname === l.href
+                    l.href === "/admin"
+                      ? pathname === "/admin"
                       : pathname.startsWith(l.href);
                   return (
                     <Link
                       key={l.href}
                       href={l.href}
                       className={`px-3 py-2 rounded-full text-sm font-medium ${
-                        active
-                          ? "bob-btn"
-                          : "hover:bg-[var(--bob-cream)]"
+                        active ? "bob-btn" : "hover:bg-[var(--bob-cream)]"
                       }`}
                     >
                       {l.label}
@@ -161,6 +168,28 @@ export function AdminShell({
                     </Link>
                   );
                 })}
+                {withRobotSelect ? (
+                  <div className="relative group">
+                    <span className="px-3 py-2 rounded-full text-sm font-medium hover:bg-[var(--bob-cream)] cursor-default inline-block">
+                      Moduli
+                    </span>
+                    <div className="absolute left-0 top-full z-20 hidden group-hover:block min-w-52 rounded-2xl border border-[var(--bob-line)] bg-white p-2 shadow-lg">
+                      {enabledModuleLinks(modules).map((m) => (
+                        <Link
+                          key={m.href}
+                          href={m.href}
+                          className={`block rounded-xl px-3 py-2 text-sm ${
+                            pathname.startsWith(m.href)
+                              ? "bg-[var(--bob-cream)] font-medium"
+                              : "hover:bg-[var(--bob-cream)]"
+                          }`}
+                        >
+                          {m.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 {backToSuper ? (
                   <button
                     type="button"
@@ -180,7 +209,7 @@ export function AdminShell({
             </div>
           </div>
         </header>
-        <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
+        <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
       </div>
     </Ctx.Provider>
   );

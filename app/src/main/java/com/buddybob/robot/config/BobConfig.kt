@@ -102,7 +102,9 @@ data class BobConfig(
         val cooldownSec: Int = 45,
         val maxDistanceMeters: Double = 3.0,
         val raiseHeadVertical: Int = 35,
-        val buttons: List<MenuButton> = defaultMenuButtons()
+        val buttons: List<MenuButton> = defaultMenuButtons(),
+        val settingsPin: String = "1234",
+        val standbyPlace: String = ""
     )
 
     data class MenuButton(

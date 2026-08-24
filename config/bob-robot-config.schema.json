@@ -263,6 +263,16 @@
           "default": 35,
           "description": "Absolute vertical gimbal angle while greeting"
         },
+        "settingsPin": {
+          "type": "string",
+          "default": "1234",
+          "description": "PIN to open robot settings on the APK"
+        },
+        "standbyPlace": {
+          "type": "string",
+          "default": "",
+          "description": "Map place to return to while waiting"
+        },
         "buttons": {
           "type": "array",
           "description": "Reception menu buttons. Order = display order. id is stable; label is shown.",

@@ -86,6 +86,7 @@ export function buildRobotConfig(
       bookingUrl: string;
       checkInSpeak: string;
       callOperatorSpeak: string;
+      settingsPin?: string;
     } | null;
   },
   adminModules?: AdminModules
@@ -120,7 +121,12 @@ export function buildRobotConfig(
 
   return {
     schemaVersion: 1,
-    configVersion: configVersionOf({ modules, receptionButtons, bookingUrl }),
+    configVersion: configVersionOf({
+      modules,
+      receptionButtons,
+      bookingUrl,
+      settingsPin: s?.settingsPin ?? "1234",
+    }),
     updatedAt: new Date().toISOString(),
     robot: {
       id: robot.id,
@@ -157,6 +163,8 @@ export function buildRobotConfig(
       cooldownSec: 45,
       maxDistanceMeters: 3,
       raiseHeadVertical: 35,
+      settingsPin: s?.settingsPin?.trim() || "1234",
+      standbyPlace: "",
       buttons: receptionButtons,
     },
     sync: {

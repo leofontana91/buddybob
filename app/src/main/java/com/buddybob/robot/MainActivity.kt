@@ -1,18 +1,39 @@
 package com.buddybob.robot
 
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.View
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.TextView
+import android.widget.VideoView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
-import com.buddybob.robot.robot.ReceptionController
+import com.buddybob.robot.platform.PlaceContentStore
+import com.buddybob.robot.ui.AccessControlFragment
+import com.buddybob.robot.ui.AppointmentsHubFragment
+import com.buddybob.robot.ui.CallOperatorFragment
+import com.buddybob.robot.ui.DocumentsFragment
 import com.buddybob.robot.ui.HomeFragment
+import com.buddybob.robot.ui.PlaceholderFeatureFragment
+import com.buddybob.robot.ui.PlacesFragment
 import com.buddybob.robot.ui.ReceptionFragment
+import com.buddybob.robot.ui.SpeechFragment
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
 
     private val handler = Handler(Looper.getMainLooper())
     private var inactivityRunnable: Runnable? = null
+    private val imageClient = OkHttpClient.Builder()
+        .connectTimeout(8, TimeUnit.SECONDS)
+        .readTimeout(20, TimeUnit.SECONDS)
+        .build()
 
     /** True when showing a sub-feature (not reception). */
     private var inSubFeature = false
@@ -30,6 +51,7 @@ class MainActivity : AppCompatActivity() {
     fun openReceptionOrHome() {
         inSubFeature = false
         cancelInactivityTimer()
+        hidePlaceDisplay()
         val receptionOn = BuddybobApp.instance.config.current.modules.reception
         replaceFragment(
             if (receptionOn) ReceptionFragment.newInstance()
@@ -40,6 +62,7 @@ class MainActivity : AppCompatActivity() {
     fun switchFragment(fragment: Fragment) {
         val isReception = fragment is ReceptionFragment
         inSubFeature = !isReception
+        hidePlaceDisplay()
         replaceFragment(fragment)
         if (inSubFeature) {
             startInactivityTimer()
@@ -49,12 +72,117 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun replaceFragment(fragment: Fragment) {
+        val container = findViewById<View?>(R.id.container_content) ?: return
         supportFragmentManager.beginTransaction()
-            .replace(R.id.container_content, fragment, fragment.javaClass.name)
+            .replace(container.id, fragment, fragment.javaClass.name)
             .commitAllowingStateLoss()
     }
 
-    /** Called by ReceptionController when it detects a guest while in a sub-feature. */
+    fun showPlaceDisplay(text: String?, media: PlaceContentStore.Media?) {
+        handler.post {
+            val overlay = findViewById<FrameLayout?>(R.id.overlay_place_media) ?: return@post
+            val image = findViewById<ImageView>(R.id.overlay_place_image)
+            val video = findViewById<VideoView>(R.id.overlay_place_video)
+            val caption = findViewById<TextView>(R.id.overlay_place_text)
+
+            stopVideo()
+            image.setImageDrawable(null)
+            image.visibility = View.GONE
+            video.visibility = View.GONE
+
+            val hasText = !text.isNullOrBlank()
+            val url = media?.url?.trim().orEmpty()
+            val type = media?.contentType.orEmpty()
+            if (!hasText && url.isBlank()) {
+                overlay.visibility = View.GONE
+                return@post
+            }
+
+            overlay.visibility = View.VISIBLE
+            if (hasText) {
+                caption.text = text
+                caption.visibility = View.VISIBLE
+            } else {
+                caption.visibility = View.GONE
+            }
+
+            when {
+                url.isBlank() -> Unit
+                type.startsWith("video/") || url.endsWith(".mp4") || url.endsWith(".webm") -> {
+                    video.visibility = View.VISIBLE
+                    video.setVideoURI(Uri.parse(url))
+                    video.setOnPreparedListener { mp ->
+                        mp.isLooping = true
+                        video.start()
+                    }
+                }
+                type.startsWith("audio/") -> Unit
+                else -> {
+                    image.visibility = View.VISIBLE
+                    Thread {
+                        val bmp = runCatching {
+                            val req = Request.Builder().url(url).build()
+                            imageClient.newCall(req).execute().use { resp ->
+                                if (!resp.isSuccessful) return@use null
+                                resp.body?.byteStream()?.use { BitmapFactory.decodeStream(it) }
+                            }
+                        }.getOrNull()
+                        handler.post {
+                            if (bmp != null) image.setImageBitmap(bmp)
+                        }
+                    }.start()
+                }
+            }
+        }
+    }
+
+    fun hidePlaceDisplay() {
+        handler.post {
+            val overlay = findViewById<FrameLayout?>(R.id.overlay_place_media) ?: return@post
+            stopVideo()
+            findViewById<ImageView?>(R.id.overlay_place_image)?.setImageDrawable(null)
+            overlay.visibility = View.GONE
+        }
+    }
+
+    private fun stopVideo() {
+        findViewById<VideoView?>(R.id.overlay_place_video)?.let { v ->
+            runCatching { v.stopPlayback() }
+            v.visibility = View.GONE
+        }
+    }
+
+    fun openModule(moduleId: String) {
+        val fragment: Fragment = when (moduleId) {
+            "appointments" -> AppointmentsHubFragment.newInstance()
+            "documents" -> DocumentsFragment.newInstance()
+            "goTo" -> PlacesFragment.newInstance()
+            "talkToMe" -> SpeechFragment.newInstance()
+            "callOperator" -> CallOperatorFragment.newInstance()
+            "accessControl" -> AccessControlFragment.newInstance()
+            "games" -> PlaceholderFeatureFragment.newInstance("games", "Giochi")
+            "voiceMemos" -> PlaceholderFeatureFragment.newInstance("voiceMemos", "Memo vocali")
+            else -> return
+        }
+        switchFragment(fragment)
+    }
+
+    /** Menu moduli aggiornato dalla piattaforma. */
+    fun onRemoteConfigUpdated() {
+        handler.post {
+            if (inSubFeature) return@post
+            val visible = supportFragmentManager.fragments.firstOrNull { it.isVisible }
+            when (visible) {
+                is ReceptionFragment -> {
+                    visible.reloadFromConfig()
+                    BuddybobApp.instance.robot.speech.setListeningDesired(
+                        BuddybobApp.instance.config.current.modules.speech
+                    )
+                }
+                is HomeFragment -> openReceptionOrHome()
+            }
+        }
+    }
     fun onGuestDetectedWhileAway() {
         if (!inSubFeature) return
         handler.post { openReceptionOrHome() }
@@ -89,6 +217,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         cancelInactivityTimer()
+        hidePlaceDisplay()
         handler.removeCallbacksAndMessages(null)
         super.onDestroy()
     }

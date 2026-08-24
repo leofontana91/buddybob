@@ -14,7 +14,7 @@ class PlatformApi {
     private val gson = Gson()
     private val client = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
-        .readTimeout(12, TimeUnit.SECONDS)
+        .readTimeout(20, TimeUnit.SECONDS)
         .build()
     private val jsonMedia = "application/json; charset=utf-8".toMediaType()
 
@@ -22,7 +22,19 @@ class PlatformApi {
         val id: String,
         val type: String,
         val placeName: String? = null,
-        val text: String? = null
+        val text: String? = null,
+        val after: String? = null,
+        val returnAfterSec: Int? = 0,
+        val steps: List<StepDto>? = null
+    )
+
+    data class StepDto(
+        val type: String = "",
+        val text: String? = null,
+        val label: String? = null,
+        val speakOnPress: String? = null,
+        val placeName: String? = null,
+        val seconds: Int? = null
     )
 
     data class CommandsResponse(val commands: List<CommandDto> = emptyList())
@@ -64,6 +76,43 @@ class PlatformApi {
     data class CheckOutResponse(
         val id: String? = null,
         val speak: String? = null
+    )
+
+    data class PlacesConfigResponse(val places: List<PlaceConfigDto> = emptyList())
+
+    data class PlaceConfigDto(
+        val name: String = "",
+        val label: String? = null,
+        val speakOnDepart: String? = null,
+        val speakWhileMoving: String? = null,
+        val speakOnArrive: String? = null,
+        val displayOnDepart: String? = null,
+        val displayWhileMoving: String? = null,
+        val displayOnArrive: String? = null,
+        val mediaOnDepart: MediaDto? = null,
+        val mediaWhileMoving: MediaDto? = null,
+        val mediaOnArrive: MediaDto? = null,
+        val waitSeconds: Int = 0
+    )
+
+    data class MediaDto(
+        val url: String = "",
+        val contentType: String = "",
+        val fileName: String = ""
+    )
+
+    data class VoiceActionDto(
+        val type: String = "",
+        val text: String? = null,
+        val placeName: String? = null,
+        val module: String? = null,
+        val after: String? = null
+    )
+
+    data class VoiceResponse(
+        val speak: String? = null,
+        val actions: List<VoiceActionDto>? = emptyList(),
+        val source: String? = null
     )
 
     data class PlaceSync(
@@ -122,6 +171,58 @@ class PlatformApi {
                 .post(body.toRequestBody(jsonMedia))
         ).build()
         executeRaw(req)
+    }
+
+    fun fetchPlaceConfigs(): List<PlaceContentStore.Place> {
+        val req = auth(
+            Request.Builder()
+                .url("${baseUrl()}/api/robots/${robotId()}/places")
+                .get()
+        ).build()
+        return execute(req, PlacesConfigResponse::class.java).places.map { it.toStore() }
+    }
+
+    private fun PlaceConfigDto.toStore(): PlaceContentStore.Place {
+        fun media(d: MediaDto?) =
+            d?.url?.trim()?.takeIf { it.isNotBlank() }?.let {
+                PlaceContentStore.Media(it, d.contentType)
+            }
+        return PlaceContentStore.Place(
+            name = name,
+            label = label,
+            speakOnDepart = speakOnDepart,
+            speakWhileMoving = speakWhileMoving,
+            speakOnArrive = speakOnArrive,
+            displayOnDepart = displayOnDepart,
+            displayWhileMoving = displayWhileMoving,
+            displayOnArrive = displayOnArrive,
+            mediaOnDepart = media(mediaOnDepart),
+            mediaWhileMoving = media(mediaWhileMoving),
+            mediaOnArrive = media(mediaOnArrive),
+            waitSeconds = waitSeconds
+        )
+    }
+
+    fun postHeartbeat(place: String?, activity: String?) {
+        val body = gson.toJson(
+            mapOf("place" to place, "activity" to activity).filterValues { it != null }
+        )
+        val req = auth(
+            Request.Builder()
+                .url("${baseUrl()}/api/robots/${robotId()}/heartbeat")
+                .post(body.toRequestBody(jsonMedia))
+        ).build()
+        executeRaw(req)
+    }
+
+    fun postVoice(text: String): VoiceResponse {
+        val body = gson.toJson(mapOf("text" to text))
+        val req = auth(
+            Request.Builder()
+                .url("${baseUrl()}/api/robots/${robotId()}/voice")
+                .post(body.toRequestBody(jsonMedia))
+        ).build()
+        return execute(req, VoiceResponse::class.java)
     }
 
     fun listForms(): List<FormDto> {

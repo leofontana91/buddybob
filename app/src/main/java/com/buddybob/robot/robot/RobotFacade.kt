@@ -3,6 +3,7 @@ package com.buddybob.robot.robot
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import com.buddybob.robot.platform.PlaceContentStore
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
@@ -24,6 +25,7 @@ class RobotFacade(private val context: Context) {
     val navigation = NavigationController()
     val status = StatusMonitor()
     val reception = ReceptionController(motion, speech, follow)
+    val placeContent = PlaceContentStore()
 
     @Volatile
     var isConnected: Boolean = false

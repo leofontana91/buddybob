@@ -44,23 +44,18 @@ class ReceptionFragment : Fragment() {
         recyclerMenu = root.findViewById(R.id.recycler_menu)
 
         textGreeting.text = BuddybobApp.instance.config.current.phrases.welcome
-
         recyclerMenu.layoutManager = GridLayoutManager(requireContext(), 2)
         bindMenu()
 
-        root.findViewById<Button>(R.id.btn_simulate_guest).setOnClickListener {
-            reception.simulateGuest()
+        root.findViewById<Button>(R.id.btn_idle_settings).setOnClickListener {
+            SettingsGate.prompt(this)
         }
-        root.findViewById<Button>(R.id.btn_reception_reset).setOnClickListener {
-            reception.resetToIdle()
+        root.findViewById<Button>(R.id.btn_menu_settings).setOnClickListener {
+            SettingsGate.prompt(this)
         }
-        root.findViewById<Button>(R.id.btn_reception_pair).setOnClickListener {
-            open(PairingFragment.newInstance())
+        panelGreeting.setOnClickListener {
+            reception.skipGreetingToMenu()
         }
-        root.findViewById<Button>(R.id.btn_reception_tech).setOnClickListener {
-            open(HomeFragment.newInstance())
-        }
-
         return root
     }
 
@@ -71,15 +66,24 @@ class ReceptionFragment : Fragment() {
         if (BuddybobApp.instance.config.current.modules.reception) {
             reception.startListening()
         }
+        if (BuddybobApp.instance.config.current.modules.speech) {
+            BuddybobApp.instance.robot.speech.setListeningDesired(true)
+        }
         renderPhase(reception.phase)
     }
 
     override fun onPause() {
         reception.onPhaseChanged = null
-        // Keep person detection active so the robot can detect guests
-        // even while showing sub-feature screens.
-        // reception.stopListening() — intentionally removed
         super.onPause()
+    }
+
+    fun reloadFromConfig() {
+        if (!isAdded) return
+        textGreeting.text = BuddybobApp.instance.config.current.phrases.welcome
+        bindMenu()
+        if (!BuddybobApp.instance.config.current.modules.reception) {
+            (activity as? MainActivity)?.openReceptionOrHome()
+        }
     }
 
     private fun bindMenu() {
