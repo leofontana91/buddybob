@@ -1,5 +1,3 @@
-import crypto from "crypto";
-
 function requireEnv(name: string, value: string | undefined) {
   if (!value) {
     throw new Error(
@@ -56,40 +54,6 @@ function encodeObjectPath(objectPath: string): string {
     .filter(Boolean)
     .map((seg) => encodeURIComponent(seg))
     .join("/");
-}
-
-export async function uploadApkObject(params: {
-  objectPath: string;
-  bytes: Uint8Array;
-  contentType?: string;
-}) {
-  const { objectPath, bytes, contentType } = params;
-
-  const url =
-    `${supabaseUrl()}/storage/v1/object/` +
-    `${encodeObjectPath(androidApkBucket())}/` +
-    `${encodeObjectPath(objectPath)}`;
-
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: {
-      // Supabase Storage expects both `apikey` and `Authorization`.
-      apikey: supabaseServiceRoleKey(),
-      Authorization: `Bearer ${supabaseServiceRoleKey()}`,
-      "x-upsert": "true",
-      "Content-Type":
-        contentType ?? "application/vnd.android.package-archive",
-    },
-    // Supabase expects raw binary body.
-    body: bytes,
-  });
-
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => "");
-    throw new Error(
-      `Supabase Storage upload failed (${resp.status}): ${text}`
-    );
-  }
 }
 
 export async function createSignedApkUrl(params: {
