@@ -98,10 +98,59 @@ export async function createSignedApkUrl(params: {
   return signed.startsWith("/") ? `${base}${signed}` : `${base}/${signed}`;
 }
 
+export async function ensureAndroidApkBucket(): Promise<void> {
+  const bucket = androidApkBucket();
+  const resp = await fetch(`${supabaseUrl()}/storage/v1/bucket`, {
+    method: "POST",
+    headers: {
+      apikey: supabaseServiceRoleKey(),
+      Authorization: `Bearer ${supabaseServiceRoleKey()}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      id: bucket,
+      name: bucket,
+      public: false,
+      file_size_limit: 157_286_400,
+    }),
+  });
+  if (resp.ok || resp.status === 409) return;
+  const text = await resp.text().catch(() => "");
+  if (/already exists|duplicate/i.test(text)) return;
+  throw new Error(`Bucket Storage ${bucket}: HTTP ${resp.status} ${text}`);
+}
+
+export async function uploadApkObject(params: {
+  objectPath: string;
+  body: ArrayBuffer;
+}): Promise<void> {
+  await ensureAndroidApkBucket();
+  const url =
+    `${supabaseUrl()}/storage/v1/object/` +
+    `${encodeObjectPath(androidApkBucket())}/` +
+    `${encodeObjectPath(params.objectPath)}`;
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: {
+      apikey: supabaseServiceRoleKey(),
+      Authorization: `Bearer ${supabaseServiceRoleKey()}`,
+      "Content-Type": "application/octet-stream",
+      "x-upsert": "true",
+      "cache-control": "3600",
+    },
+    body: params.body,
+  });
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => "");
+    throw new Error(`Upload Storage fallito (${resp.status}): ${text}`);
+  }
+}
+
 export async function createSignedUploadUrl(params: {
   objectPath: string;
   expiresInSeconds?: number;
 }): Promise<{ uploadUrl: string; token: string; path: string }> {
+  await ensureAndroidApkBucket();
   const { objectPath } = params;
   const url =
     `${supabaseUrl()}/storage/v1/object/upload/sign/` +

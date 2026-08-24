@@ -10,6 +10,7 @@ import {
 } from "date-fns";
 import { prisma } from "./db";
 import { parseModules, AdminModules, DEFAULT_ADMIN_MODULES } from "./modules";
+import { rewriteStaleAppUrl, publicAppUrl } from "./appUrl";
 
 export function parseHm(hm: string, day: Date): Date {
   const [h, m] = hm.split(":").map(Number);
@@ -90,14 +91,36 @@ export function buildRobotConfig(
   adminModules?: AdminModules
 ) {
   const s = robot.settings;
-  const bookingUrl =
-    s?.bookingUrl ||
-    `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/book/${robot.id}`;
+  const bookingUrl = rewriteStaleAppUrl(
+    s?.bookingUrl,
+    `/book/${robot.id}`
+  );
   const m = adminModules ?? DEFAULT_ADMIN_MODULES;
+
+  const receptionButtons = [
+    { id: "goTo", label: "Vai a…", enabled: m.goTo },
+    { id: "appointments", label: "Appuntamenti", enabled: m.appointments },
+    { id: "documents", label: "Documenti", enabled: m.documents },
+    { id: "talkToMe", label: "Parla con me", enabled: m.speech },
+    { id: "games", label: "Giochi", enabled: m.games },
+    { id: "callOperator", label: "Chiama operatore", enabled: m.callOperator },
+    { id: "voiceMemos", label: "Memo vocali", enabled: m.voiceMemos },
+    { id: "accessControl", label: "Controllo accessi", enabled: m.accessControl },
+  ];
+
+  const modules = {
+    reception: m.reception,
+    goTo: m.goTo,
+    motion: m.motion,
+    speech: m.speech,
+    follow: m.follow,
+    charge: m.charge,
+    settings: m.settings,
+  };
 
   return {
     schemaVersion: 1,
-    configVersion: 2,
+    configVersion: configVersionOf({ modules, receptionButtons, bookingUrl }),
     updatedAt: new Date().toISOString(),
     robot: {
       id: robot.id,
@@ -105,15 +128,7 @@ export function buildRobotConfig(
       locale: robot.locale,
       timezone: robot.timezone,
     },
-    modules: {
-      reception: m.reception,
-      goTo: m.goTo,
-      motion: m.motion,
-      speech: m.speech,
-      follow: m.follow,
-      charge: m.charge,
-      settings: m.settings,
-    },
+    modules,
     phrases: {
       welcome: "Benvenuto",
       howCanIHelp: "Come posso aiutarti?",
@@ -142,20 +157,11 @@ export function buildRobotConfig(
       cooldownSec: 45,
       maxDistanceMeters: 3,
       raiseHeadVertical: 35,
-      buttons: [
-        { id: "goTo", label: "Vai a…", enabled: m.goTo },
-        { id: "appointments", label: "Appuntamenti", enabled: m.appointments },
-        { id: "documents", label: "Documenti", enabled: m.documents },
-        { id: "talkToMe", label: "Parla con me", enabled: m.speech },
-        { id: "games", label: "Giochi", enabled: m.games },
-        { id: "callOperator", label: "Chiama operatore", enabled: m.callOperator },
-        { id: "voiceMemos", label: "Memo vocali", enabled: m.voiceMemos },
-        { id: "accessControl", label: "Controllo accessi", enabled: m.accessControl },
-      ],
+      buttons: receptionButtons,
     },
     sync: {
       fetchOnLaunch: true,
-      endpoint: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+      endpoint: publicAppUrl(),
     },
   };
 }
@@ -167,4 +173,15 @@ export async function modulesForRobot(robotId: string): Promise<AdminModules> {
   });
   if (!link?.admin) return DEFAULT_ADMIN_MODULES;
   return parseModules(link.admin.modulesJson);
+}
+
+/** Stable int so the robot only downloads when Super Admin modules/settings change. */
+function configVersionOf(payload: unknown): number {
+  const s = JSON.stringify(payload);
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return Math.abs(h) || 1;
 }

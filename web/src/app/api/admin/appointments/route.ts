@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { canAccessRobot, requireSession } from "@/lib/auth";
+import { canAccessRobot, requireSession, effectiveAdminId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { listAppointmentsForDate } from "@/lib/appointments";
 import { format } from "date-fns";
@@ -70,8 +70,8 @@ export async function POST(req: Request) {
       where: {
         id: userId,
         role: "USER",
-        ...(session.role === "ADMIN"
-          ? { adminId: session.accountId }
+        ...(effectiveAdminId(session)
+          ? { adminId: effectiveAdminId(session) as string }
           : {}),
       },
     });

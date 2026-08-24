@@ -55,7 +55,11 @@ export async function POST(req: Request) {
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     return NextResponse.json(
-      { error: "Impossibile preparare l'upload Storage", details: message },
+      {
+        error:
+          "Impossibile preparare l'upload Storage. Controlla SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (o SUPABASE_SECRET_KEY) e il bucket bob-android-apks.",
+        details: message,
+      },
       { status: 500 }
     );
   }

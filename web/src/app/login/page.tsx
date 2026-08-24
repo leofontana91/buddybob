@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -71,6 +72,12 @@ export default function LoginPage() {
         >
           {loading ? "Accesso…" : "Entra"}
         </button>
+
+        <p className="mt-5 text-center">
+          <Link href="/forgot" className="bob-link text-base">
+            Password dimenticata? Recuperala
+          </Link>
+        </p>
       </form>
     </main>
   );

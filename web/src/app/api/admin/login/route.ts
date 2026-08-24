@@ -61,6 +61,7 @@ export async function POST(req: Request) {
     name: account.name,
     role,
     adminId: account.adminId,
+    actingAdminId: null,
   });
 
   return NextResponse.json({

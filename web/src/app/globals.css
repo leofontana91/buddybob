@@ -41,6 +41,13 @@
     color: #ffffff;
   }
 
+  .bob-link {
+    color: var(--bob-navy);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    font-weight: 600;
+  }
+
   .bob-dialog {
     background-color: #ffffff;
     color: var(--bob-black);

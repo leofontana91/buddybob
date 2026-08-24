@@ -228,6 +228,7 @@ export async function POST(req: Request) {
       status: admin.status,
       emailSent: mail.sent,
       activationUrl: mail.activationUrl,
+      mailError: mail.mailError,
     });
   }
 
@@ -330,6 +331,7 @@ export async function POST(req: Request) {
       ok: true,
       emailSent: mail.sent,
       activationUrl: mail.activationUrl,
+      mailError: mail.mailError,
     });
   }
 

@@ -2,16 +2,20 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/auth";
+import { requireSession, effectiveAdminId } from "@/lib/auth";
 
 export async function GET() {
-  const session = await requireSession(["ADMIN"]);
+  const session = await requireSession(["ADMIN", "SUPER_ADMIN"]);
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const adminId = effectiveAdminId(session);
+  if (!adminId) {
+    return NextResponse.json({ error: "Nessun cliente selezionato" }, { status: 400 });
+  }
 
   const users = await prisma.account.findMany({
-    where: { role: "USER", adminId: session.accountId },
+    where: { role: "USER", adminId },
     include: {
       _count: { select: { appointments: true } },
     },
@@ -35,9 +39,13 @@ const createSchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const session = await requireSession(["ADMIN"]);
+  const session = await requireSession(["ADMIN", "SUPER_ADMIN"]);
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const adminId = effectiveAdminId(session);
+  if (!adminId) {
+    return NextResponse.json({ error: "Nessun cliente selezionato" }, { status: 400 });
   }
 
   const parsed = createSchema.safeParse(await req.json());
@@ -58,7 +66,7 @@ export async function POST(req: Request) {
       email: parsed.data.email.toLowerCase(),
       passwordHash: await bcrypt.hash(parsed.data.password, 10),
       role: "USER",
-      adminId: session.accountId,
+      adminId,
     },
   });
 
@@ -66,9 +74,13 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const session = await requireSession(["ADMIN"]);
+  const session = await requireSession(["ADMIN", "SUPER_ADMIN"]);
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const adminId = effectiveAdminId(session);
+  if (!adminId) {
+    return NextResponse.json({ error: "Nessun cliente selezionato" }, { status: 400 });
   }
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
@@ -77,7 +89,7 @@ export async function DELETE(req: Request) {
   }
 
   const user = await prisma.account.findFirst({
-    where: { id, role: "USER", adminId: session.accountId },
+    where: { id, role: "USER", adminId },
   });
   if (!user) {
     return NextResponse.json({ error: "Utente non trovato" }, { status: 404 });

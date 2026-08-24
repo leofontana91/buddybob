@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { setHours, setMinutes, startOfDay } from "date-fns";
 import { stringifyModules, DEFAULT_ADMIN_MODULES } from "../src/lib/modules";
+import { publicAppUrl } from "../src/lib/appUrl";
 
 const prisma = new PrismaClient();
 
@@ -79,7 +80,7 @@ async function main() {
       settings: {
         create: {
           bookingMode: "qr",
-          bookingUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/book/bob-demo-001`,
+          bookingUrl: `${publicAppUrl()}/book/bob-demo-001`,
         },
       },
     },

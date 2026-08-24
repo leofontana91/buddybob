@@ -20,14 +20,19 @@ npm run dev
 
 http://localhost:3000
 
+Produzione: **https://buddybob.app**
+
+Su Vercel imposta (Production):
+- `NEXT_PUBLIC_APP_URL=https://buddybob.app` (consigliato)
+- `RESEND_FROM=BOB Robotics <noreply@buddybob.app>` dopo aver verificato il dominio su Resend
+
 ## Collegare un robot (APK)
 
 1. Super admin crea il robot → ottiene `id` + `apiKey`
 2. Super admin lo associa a un admin
 3. Nell’APK / `bob-config.json`:
-   - `robot.id`
-   - `appointments.apiKey`
-   - `sync.endpoint`
+   - `sync.endpoint` = `https://buddybob.app`
+   - dopo il pairing: `robot.id` + `appointments.apiKey` arrivano dal server
 
 ## Android OTA-like aggiornamenti (Super Admin)
 

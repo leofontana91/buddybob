@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { setHours, setMinutes, startOfDay } from "date-fns";
 import { prisma } from "@/lib/db";
 import { stringifyModules, DEFAULT_ADMIN_MODULES } from "@/lib/modules";
+import { publicAppUrl } from "@/lib/appUrl";
 
 /** Creates demo accounts/robot only when the database is empty (dev/local only). */
 export async function ensureSeedIfEmpty() {
@@ -16,7 +17,7 @@ export async function ensureSeedIfEmpty() {
   if (count > 0) return { seeded: false };
 
   const hash = async (p: string) => bcrypt.hash(p, 10);
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://localhost";
+  const appUrl = publicAppUrl();
 
   await prisma.account.create({
     data: {

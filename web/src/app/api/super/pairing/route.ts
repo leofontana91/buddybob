@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import QRCode from "qrcode";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { publicAppUrl, rewriteStaleAppUrl } from "@/lib/appUrl";
 
 /**
  * Returns pairing JSON + PNG data URL for APK association QR.
@@ -26,10 +27,12 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Robot non trovato" }, { status: 404 });
   }
 
-  const endpoint =
-    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const bookingUrl =
-    robot.settings?.bookingUrl || `${endpoint}/book/${robot.id}`;
+  const endpoint = publicAppUrl(req);
+  const bookingUrl = rewriteStaleAppUrl(
+    robot.settings?.bookingUrl,
+    `/book/${robot.id}`,
+    req
+  );
 
   const payload = {
     v: 1,
@@ -53,7 +56,6 @@ export async function GET(req: Request) {
     serialNumber: robot.serialNumber,
     displayName: robot.displayName,
     hint:
-      "Sull'APK: Associa robot → Scansiona QR (oppure incolla il JSON). " +
-      "Se il robot non raggiunge localhost, imposta NEXT_PUBLIC_APP_URL con l'IP LAN (es. http://192.168.1.10:3000) e rigenera il QR.",
+      "Sull'APK: Associa robot → inserisci il codice. L'endpoint è https://buddybob.app.",
   });
 }

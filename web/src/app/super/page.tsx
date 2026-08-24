@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   DEFAULT_ADMIN_MODULES,
   MODULE_LABELS,
@@ -26,6 +27,90 @@ type AdminRow = {
   }[];
 };
 
+function formatApiError(
+  data: { error?: string; details?: string },
+  fallback: string
+) {
+  const parts = [data.error || fallback, data.details].filter(Boolean);
+  return parts.join(" — ");
+}
+
+async function putApkToStorage(params: {
+  file: File;
+  uploadUrl?: string;
+  token?: string;
+  objectPath: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { file, uploadUrl, token, objectPath } = params;
+
+  if (uploadUrl) {
+    try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/octet-stream",
+      };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const url =
+        token && !uploadUrl.includes("token=")
+          ? `${uploadUrl}${uploadUrl.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
+          : uploadUrl;
+      const putRes = await fetch(url, {
+        method: "PUT",
+        headers,
+        body: file,
+      });
+      if (putRes.ok) return { ok: true };
+      const t = await putRes.text().catch(() => "");
+      if (putRes.status !== 0) {
+        const viaProxy = await pushApkViaServer(objectPath, file);
+        if (viaProxy.ok) return { ok: true };
+        return {
+          ok: false,
+          error: `Upload Storage fallito (${putRes.status}) ${t}`.trim() +
+            (viaProxy.error ? ` — fallback: ${viaProxy.error}` : ""),
+        };
+      }
+    } catch {
+      const viaProxy = await pushApkViaServer(objectPath, file);
+      if (viaProxy.ok) return { ok: true };
+      return {
+        ok: false,
+        error:
+          viaProxy.error ||
+          "Il browser non riesce a inviare l'APK a Storage (CORS). Se l'APK è sotto ~4.5 MB il server riprova in automatico.",
+      };
+    }
+  }
+
+  return pushApkViaServer(objectPath, file);
+}
+
+async function pushApkViaServer(
+  objectPath: string,
+  file: File
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const form = new FormData();
+  form.set("objectPath", objectPath);
+  form.set("file", file);
+  try {
+    const res = await fetch("/api/super/android-update/releases/push", {
+      method: "POST",
+      credentials: "include",
+      body: form,
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      details?: string;
+    };
+    if (!res.ok) {
+      return { ok: false, error: formatApiError(data, `Upload server HTTP ${res.status}`) };
+    }
+    return { ok: true };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: message };
+  }
+}
+
 type RobotRow = {
   id: string;
   displayName: string;
@@ -36,6 +121,7 @@ type RobotRow = {
 };
 
 export default function SuperPage() {
+  const router = useRouter();
   const [admins, setAdmins] = useState<AdminRow[]>([]);
   const [robots, setRobots] = useState<RobotRow[]>([]);
   const [msg, setMsg] = useState("");
@@ -99,6 +185,11 @@ export default function SuperPage() {
     }
     setMsg("OK");
     if (data.activationUrl) setActivationUrl(data.activationUrl);
+    if (data.emailSent) {
+      setMsg("OK — email di attivazione inviata");
+    } else if (data.mailError) {
+      setMsg(`OK account, email non inviata: ${data.mailError}`);
+    }
     await load();
     return data;
   }
@@ -119,34 +210,44 @@ export default function SuperPage() {
     try {
       const startRes = await fetch("/api/super/android-update/releases/start", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           robotId: androidUpdateRobotId.trim() || undefined,
           versionName: androidUpdateVersionName.trim(),
         }),
       });
-      const startData = await startRes.json().catch(() => ({}));
+      const startData = (await startRes.json().catch(() => ({}))) as {
+        error?: string;
+        details?: string;
+        uploadUrl?: string;
+        token?: string;
+        objectPath?: string;
+      };
       if (!startRes.ok) {
-        setAndroidUpdateMsg(startData.error ?? "Errore preparazione upload");
+        setAndroidUpdateMsg(
+          formatApiError(
+            startData,
+            startRes.status === 401
+              ? "Sessione scaduta: ricarica la pagina e accedi di nuovo."
+              : "Errore preparazione upload"
+          )
+        );
+        return;
+      }
+      if (!startData.objectPath) {
+        setAndroidUpdateMsg("Risposta upload incompleta (manca objectPath)");
         return;
       }
 
-      const putUrl = startData.token
-        ? `${startData.uploadUrl}${startData.uploadUrl.includes("?") ? "&" : "?"}token=${encodeURIComponent(startData.token)}`
-        : startData.uploadUrl;
-      const putRes = await fetch(putUrl, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/vnd.android.package-archive",
-          "x-upsert": "true",
-        },
-        body: androidUpdateFile,
+      const stored = await putApkToStorage({
+        file: androidUpdateFile,
+        uploadUrl: startData.uploadUrl,
+        token: startData.token,
+        objectPath: startData.objectPath,
       });
-      if (!putRes.ok) {
-        const t = await putRes.text().catch(() => "");
-        setAndroidUpdateMsg(
-          `Upload Storage fallito (${putRes.status}) ${t}`.trim()
-        );
+      if (!stored.ok) {
+        setAndroidUpdateMsg(stored.error);
         return;
       }
 
@@ -154,6 +255,7 @@ export default function SuperPage() {
         "/api/super/android-update/releases/complete",
         {
           method: "POST",
+          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             robotId: androidUpdateRobotId.trim() || undefined,
@@ -166,16 +268,19 @@ export default function SuperPage() {
       const completeData = await completeRes.json().catch(() => ({}));
       if (!completeRes.ok) {
         setAndroidUpdateMsg(
-          completeData.error ?? "Errore salvataggio rilascio"
+          formatApiError(completeData, "Errore salvataggio rilascio")
         );
         return;
       }
 
-      setAndroidUpdateMsg("OK: rilascio creato");
+      setAndroidUpdateMsg("OK: rilascio creato. Il robot lo vedrà al prossimo controllo (o al riavvio dell'app).");
       setAndroidUpdateVersionName("");
       setAndroidUpdateNotes("");
       setAndroidUpdateFile(null);
       await load();
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      setAndroidUpdateMsg(`Upload interrotto: ${message}`);
     } finally {
       setAndroidUpdateUploading(false);
     }
@@ -207,6 +312,20 @@ export default function SuperPage() {
 
   function toggleModule(key: keyof AdminModules) {
     setModules((m) => ({ ...m, [key]: !m[key] }));
+  }
+
+  async function openClientPanel(adminId: string) {
+    const res = await fetch("/api/super/impersonate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adminId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setMsg(data.error ?? "Impossibile aprire il pannello");
+      return;
+    }
+    router.push(data.redirect ?? "/admin");
   }
 
   async function openPairing(robotId: string) {
@@ -246,7 +365,7 @@ export default function SuperPage() {
         ) : null}
         {activationUrl ? (
           <p className="mt-2 text-sm break-all">
-            Link attivazione (copia e invia se la mail non è configurata):{" "}
+            Link attivazione (copia e invia se l&apos;email non è partita):{" "}
             <a className="underline text-[var(--bob-navy)]" href={activationUrl}>
               {activationUrl}
             </a>
@@ -375,6 +494,13 @@ export default function SuperPage() {
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="text-xs rounded-full bg-[var(--bob-black)] text-white px-3 py-1.5"
+                    onClick={() => openClientPanel(a.id)}
+                  >
+                    Entra nel pannello
+                  </button>
                   {a.status !== "active" ? (
                     <button
                       type="button"
@@ -404,6 +530,10 @@ export default function SuperPage() {
 
               <div>
                 <p className="text-sm font-medium mb-2">Moduli</p>
+                <p className="text-xs text-[var(--bob-muted)] mb-2">
+                  Spegnendo un modulo sparisce dal menu del robot. Il robot
+                  associato e online aggiorna da solo entro circa 30 secondi.
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {(Object.keys(MODULE_LABELS) as (keyof AdminModules)[]).map(
                     (key) => (
@@ -574,7 +704,15 @@ export default function SuperPage() {
           </button>
 
           {androidUpdateMsg ? (
-            <p className="text-sm mt-2 text-[var(--bob-teal)]">{androidUpdateMsg}</p>
+            <p
+              className={`text-sm mt-2 ${
+                androidUpdateMsg.startsWith("OK:")
+                  ? "text-[var(--bob-teal)]"
+                  : "text-red-700"
+              }`}
+            >
+              {androidUpdateMsg}
+            </p>
           ) : null}
         </form>
       </section>

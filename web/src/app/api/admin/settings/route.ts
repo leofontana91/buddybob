@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireSession, canAccessRobot } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
+import { publicPathUrl } from "@/lib/appUrl";
 
 export async function GET(req: Request) {
   const session = await requireSession(["ADMIN", "SUPER_ADMIN"]);
@@ -78,8 +79,7 @@ export async function PATCH(req: Request) {
       robotId,
       bookingMode: settings.bookingMode ?? "qr",
       bookingUrl:
-        settings.bookingUrl ??
-        `${process.env.NEXT_PUBLIC_APP_URL}/book/${robotId}`,
+        settings.bookingUrl ?? publicPathUrl(`/book/${robotId}`, req),
       checkInSpeak: settings.checkInSpeak,
       callOperatorSpeak: settings.callOperatorSpeak,
       dayStart: settings.dayStart,

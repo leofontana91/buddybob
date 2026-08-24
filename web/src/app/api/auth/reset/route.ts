@@ -6,21 +6,14 @@ import { isPasswordResetToken } from "@/lib/mail";
 
 export async function GET(req: Request) {
   const token = new URL(req.url).searchParams.get("token");
-  if (!token) {
-    return NextResponse.json({ error: "Token mancante" }, { status: 400 });
-  }
-
-  if (isPasswordResetToken(token)) {
-    return NextResponse.json({ error: "Link non valido" }, { status: 404 });
+  if (!token || !isPasswordResetToken(token)) {
+    return NextResponse.json({ error: "Link non valido" }, { status: 400 });
   }
 
   const account = await prisma.account.findFirst({
-    where: {
-      activationToken: token,
-      role: "ADMIN",
-    },
+    where: { activationToken: token },
   });
-  if (!account) {
+  if (!account || account.status === "disabled") {
     return NextResponse.json({ error: "Link non valido" }, { status: 404 });
   }
   if (
@@ -33,8 +26,6 @@ export async function GET(req: Request) {
   return NextResponse.json({
     email: account.email,
     name: account.name,
-    companyName: account.companyName,
-    city: account.city,
   });
 }
 
@@ -48,18 +39,14 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
   }
-
-  if (isPasswordResetToken(parsed.data.token)) {
-    return NextResponse.json({ error: "Link non valido" }, { status: 404 });
+  if (!isPasswordResetToken(parsed.data.token)) {
+    return NextResponse.json({ error: "Link non valido" }, { status: 400 });
   }
 
   const account = await prisma.account.findFirst({
-    where: {
-      activationToken: parsed.data.token,
-      role: "ADMIN",
-    },
+    where: { activationToken: parsed.data.token },
   });
-  if (!account) {
+  if (!account || account.status === "disabled") {
     return NextResponse.json({ error: "Link non valido" }, { status: 404 });
   }
   if (
@@ -79,5 +66,5 @@ export async function POST(req: Request) {
     },
   });
 
-  return NextResponse.json({ ok: true, email: account.email });
+  return NextResponse.json({ ok: true });
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { publicAppUrl, publicPathUrl } from "@/lib/appUrl";
 
 const bodySchema = z.object({
   serialNumber: z.string().min(1),
@@ -59,8 +60,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Codice non valido" }, { status: 403 });
   }
 
-  const origin = new URL(req.url).origin;
-  const bookingUrl = `${origin}/book/${robot.id}`;
+  const origin = publicAppUrl(req);
+  const bookingUrl = publicPathUrl(`/book/${robot.id}`, req);
 
   // One-time: consume the code after success
   await prisma.robot.update({

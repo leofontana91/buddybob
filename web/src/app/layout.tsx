@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { CANONICAL_APP_URL } from "@/lib/appUrl";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,6 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(CANONICAL_APP_URL),
   title: "BOB Admin — Appuntamenti",
   description: "Piattaforma gestione agenda e robot BOB",
 };

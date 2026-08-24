@@ -34,12 +34,14 @@ export function AdminShell({
   links,
   children,
   withRobotSelect = true,
+  backToSuper = false,
 }: {
   operatorName: string;
   roleLabel: string;
   links: { href: string; label: string; badgeKey?: "inbox" }[];
   children: React.ReactNode;
   withRobotSelect?: boolean;
+  backToSuper?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -100,6 +102,15 @@ export function AdminShell({
     router.replace("/login");
   }
 
+  async function leaveClientPanel() {
+    await fetch("/api/super/impersonate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adminId: null }),
+    });
+    router.replace("/super");
+  }
+
   return (
     <Ctx.Provider value={value}>
       <div className="min-h-screen">
@@ -150,6 +161,15 @@ export function AdminShell({
                     </Link>
                   );
                 })}
+                {backToSuper ? (
+                  <button
+                    type="button"
+                    onClick={leaveClientPanel}
+                    className="px-3 py-2 rounded-full text-sm bg-[var(--bob-navy)] text-white"
+                  >
+                    Torna a Super Admin
+                  </button>
+                ) : null}
                 <button
                   onClick={logout}
                   className="ml-2 px-3 py-2 rounded-full text-sm border border-[var(--bob-line)]"

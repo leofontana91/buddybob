@@ -13,6 +13,8 @@ export type SessionPayload = {
   name: string;
   role: Role;
   adminId: string | null;
+  /** Super Admin viewing a specific client's admin panel. */
+  actingAdminId: string | null;
 };
 
 function secret() {
@@ -54,6 +56,9 @@ export async function getSession(): Promise<SessionPayload | null> {
       name: String(payload.name),
       role,
       adminId: payload.adminId ? String(payload.adminId) : null,
+      actingAdminId: payload.actingAdminId
+        ? String(payload.actingAdminId)
+        : null,
     };
   } catch {
     return null;
@@ -65,6 +70,13 @@ export async function requireSession(roles?: Role[]) {
   if (!session) return null;
   if (roles && !roles.includes(session.role)) return null;
   return session;
+}
+
+/** Admin whose tenant data this session should see. */
+export function effectiveAdminId(session: SessionPayload): string | null {
+  if (session.role === "ADMIN") return session.accountId;
+  if (session.role === "SUPER_ADMIN") return session.actingAdminId;
+  return null;
 }
 
 export async function adminRobotIds(adminId: string): Promise<string[]> {
@@ -79,16 +91,15 @@ export async function canAccessRobot(
   session: SessionPayload,
   robotId: string
 ): Promise<boolean> {
-  if (session.role === "SUPER_ADMIN") return true;
-  if (session.role === "ADMIN") {
-    const link = await prisma.adminRobot.findUnique({
-      where: {
-        adminId_robotId: { adminId: session.accountId, robotId },
-      },
-    });
-    return !!link;
-  }
-  return false;
+  if (session.role === "SUPER_ADMIN" && !session.actingAdminId) return true;
+  const adminId = effectiveAdminId(session);
+  if (!adminId) return false;
+  const link = await prisma.adminRobot.findUnique({
+    where: {
+      adminId_robotId: { adminId, robotId },
+    },
+  });
+  return !!link;
 }
 
 export async function requireRobot(robotId: string) {
