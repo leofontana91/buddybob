@@ -28,3 +28,17 @@ http://localhost:3000
    - `robot.id`
    - `appointments.apiKey`
    - `sync.endpoint`
+
+## Android OTA-like aggiornamenti (Super Admin)
+
+Il Super Admin può caricare un nuovo APK nella sezione "Aggiornamenti Android".
+Il robot controllerà un manifest endpoint autenticato via `Authorization: Bearer <robot.apiKey>`.
+
+Env vars (server-side, necessari per Supabase Storage):
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_ANDROID_APK_BUCKET` (bucket Storage per gli APK, privato)
+- `ANDROID_UPDATE_SIGNED_URL_TTL_SEC` (opzionale, default: `3600`)
+
+Su Supabase → Storage crea un bucket privato con quel nome (es. `bob-android-apks`).
+L’APK viene caricato dal browser verso Storage (Vercel non accetta file > ~4,5 MB).

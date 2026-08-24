@@ -60,6 +60,18 @@ export default function SuperPage() {
   const [pairCode, setPairCode] = useState("");
   const [pairUntil, setPairUntil] = useState("");
 
+  // Android OTA-like updates (uploaded by SUPER_ADMIN).
+  const [androidUpdateRobotId, setAndroidUpdateRobotId] = useState<string>("");
+  // "" => global release (tutti i robot)
+  const [androidUpdateVersionName, setAndroidUpdateVersionName] =
+    useState<string>("");
+  const [androidUpdateNotes, setAndroidUpdateNotes] = useState<string>("");
+  const [androidUpdateFile, setAndroidUpdateFile] =
+    useState<File | null>(null);
+  const [androidUpdateUploading, setAndroidUpdateUploading] =
+    useState<boolean>(false);
+  const [androidUpdateMsg, setAndroidUpdateMsg] = useState<string>("");
+
   const load = useCallback(async () => {
     const res = await fetch("/api/super");
     if (!res.ok) return;
@@ -89,6 +101,84 @@ export default function SuperPage() {
     if (data.activationUrl) setActivationUrl(data.activationUrl);
     await load();
     return data;
+  }
+
+  async function uploadAndroidUpdate(e: FormEvent) {
+    e.preventDefault();
+    if (!androidUpdateFile) {
+      setAndroidUpdateMsg("Seleziona un file APK");
+      return;
+    }
+    if (!androidUpdateVersionName.trim()) {
+      setAndroidUpdateMsg("Inserisci la versione (versionName)");
+      return;
+    }
+
+    setAndroidUpdateMsg("");
+    setAndroidUpdateUploading(true);
+    try {
+      const startRes = await fetch("/api/super/android-update/releases/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          robotId: androidUpdateRobotId.trim() || undefined,
+          versionName: androidUpdateVersionName.trim(),
+        }),
+      });
+      const startData = await startRes.json().catch(() => ({}));
+      if (!startRes.ok) {
+        setAndroidUpdateMsg(startData.error ?? "Errore preparazione upload");
+        return;
+      }
+
+      const putUrl = startData.token
+        ? `${startData.uploadUrl}${startData.uploadUrl.includes("?") ? "&" : "?"}token=${encodeURIComponent(startData.token)}`
+        : startData.uploadUrl;
+      const putRes = await fetch(putUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/vnd.android.package-archive",
+          "x-upsert": "true",
+        },
+        body: androidUpdateFile,
+      });
+      if (!putRes.ok) {
+        const t = await putRes.text().catch(() => "");
+        setAndroidUpdateMsg(
+          `Upload Storage fallito (${putRes.status}) ${t}`.trim()
+        );
+        return;
+      }
+
+      const completeRes = await fetch(
+        "/api/super/android-update/releases/complete",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            robotId: androidUpdateRobotId.trim() || undefined,
+            versionName: androidUpdateVersionName.trim(),
+            notes: androidUpdateNotes.trim() || undefined,
+            objectPath: startData.objectPath,
+          }),
+        }
+      );
+      const completeData = await completeRes.json().catch(() => ({}));
+      if (!completeRes.ok) {
+        setAndroidUpdateMsg(
+          completeData.error ?? "Errore salvataggio rilascio"
+        );
+        return;
+      }
+
+      setAndroidUpdateMsg("OK: rilascio creato");
+      setAndroidUpdateVersionName("");
+      setAndroidUpdateNotes("");
+      setAndroidUpdateFile(null);
+      await load();
+    } finally {
+      setAndroidUpdateUploading(false);
+    }
   }
 
   async function createAdmin(e: FormEvent) {
@@ -414,6 +504,79 @@ export default function SuperPage() {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section>
+        <h2 className="font-semibold text-lg mb-3">Aggiornamenti Android</h2>
+        <p className="text-sm text-[var(--bob-muted)] mt-1">
+          Carica un nuovo APK: i robot controlleranno il manifest e proporranno
+          l&apos;aggiornamento. Il file va su Supabase Storage (non passa da Vercel).
+        </p>
+
+        <form
+          onSubmit={uploadAndroidUpdate}
+          className="rounded-2xl bg-white border border-[var(--bob-line)] p-6 space-y-4 mt-4"
+        >
+          <div className="grid md:grid-cols-2 gap-3">
+            <select
+              value={androidUpdateRobotId}
+              onChange={(e) => setAndroidUpdateRobotId(e.target.value)}
+              className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            >
+              <option value="">Globale (tutti i robot)</option>
+              {robots.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.displayName} ({r.id})
+                </option>
+              ))}
+            </select>
+
+            <input
+              required
+              placeholder="versionName (es. 1.1.1)"
+              className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+              value={androidUpdateVersionName}
+              onChange={(e) => setAndroidUpdateVersionName(e.target.value)}
+            />
+
+            <textarea
+              placeholder="Note (opzionale)"
+              className="md:col-span-2 rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+              value={androidUpdateNotes}
+              onChange={(e) => setAndroidUpdateNotes(e.target.value)}
+              rows={3}
+            />
+
+            <div className="md:col-span-2">
+              <input
+                required
+                type="file"
+                accept=".apk"
+                onChange={(e) =>
+                  setAndroidUpdateFile(e.target.files?.[0] ?? null)
+                }
+                className="w-full text-sm"
+              />
+              {androidUpdateFile ? (
+                <p className="text-xs mt-2 text-[var(--bob-muted)] break-all">
+                  Selezionato: {androidUpdateFile.name}
+                </p>
+              ) : null}
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="bob-btn rounded-full px-6 py-2.5 font-medium"
+            disabled={androidUpdateUploading}
+          >
+            {androidUpdateUploading ? "Caricamento…" : "Carica APK"}
+          </button>
+
+          {androidUpdateMsg ? (
+            <p className="text-sm mt-2 text-[var(--bob-teal)]">{androidUpdateMsg}</p>
+          ) : null}
+        </form>
       </section>
 
       {pairOpen ? (

@@ -63,8 +63,9 @@ model Robot {
   adminLinks     AdminRobot[]
   mapPlaces      MapPlace[]
   commands       RobotCommand[]
-  formTemplates  FormTemplate[]
-  accessVisits   AccessVisit[]
+  formTemplates    FormTemplate[]
+  accessVisits     AccessVisit[]
+  androidReleases  RobotAndroidRelease[]
 }
 
 model AdminRobot {
@@ -215,4 +216,43 @@ model AccessVisit {
 
   @@index([robotId, enteredAt])
   @@index([robotId, exitedAt])
+}
+
+/// Android OTA-like releases uploaded by SUPER_ADMIN (robot-specific).
+model RobotAndroidRelease {
+  id          String   @id @default(cuid())
+  robotId     String
+  robot       Robot    @relation(fields: [robotId], references: [id], onDelete: Cascade)
+
+  versionName String
+  /// versionCode as integer (optional, depends on what the SUPER_ADMIN provides).
+  versionCode Int?
+
+  /// Path inside Supabase Storage (NOT a public URL).
+  storagePath String
+  sha256      String?
+
+  notes     String?
+  createdAt DateTime @default(now())
+  isActive  Boolean  @default(true)
+
+  @@unique([robotId, versionName])
+  @@index([robotId, isActive])
+}
+
+/// Android OTA-like releases uploaded by SUPER_ADMIN (global, for all robots).
+model GlobalAndroidRelease {
+  id          String   @id @default(cuid())
+  versionName String
+  versionCode Int?
+
+  storagePath String
+  sha256      String?
+
+  notes     String?
+  createdAt DateTime @default(now())
+  isActive  Boolean  @default(true)
+
+  @@unique([versionName])
+  @@index([isActive])
 }
