@@ -49,8 +49,14 @@ export async function POST(req: Request, ctx: Ctx) {
     label: p.label,
   }));
 
+  const settings = await prisma.robotSettings.findUnique({ where: { robotId: id } });
   const text = parsed.data.text;
-  const fromAi = await resolveVoiceWithAi({ text, places, modules });
+  const fromAi = await resolveVoiceWithAi({
+    text,
+    places,
+    modules,
+    instructions: settings?.voiceInstructions,
+  });
   const result =
     fromAi ??
     resolveVoiceRules({ text, places, modules }) ?? {

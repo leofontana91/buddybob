@@ -12,12 +12,15 @@ export async function resolveVoiceWithAi(args: {
   text: string;
   places: VoicePlace[];
   modules: AdminModules;
+  /** Istruzioni scritte dall'admin (sinonimi, limiti, tono). */
+  instructions?: string | null;
 }): Promise<VoiceResult | null> {
   if (!openaiConfigured()) return null;
 
   const catalog = voiceCatalog(args);
   const model = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
   const key = process.env.OPENAI_API_KEY!.trim();
+  const custom = (args.instructions ?? "").trim().slice(0, 4000);
 
   const system = `Sei il parser di intenti del robot receptionist BOB (italiano).
 Dato ciò che ha detto l'ospite, rispondi SOLO con JSON valido (niente markdown):
@@ -30,11 +33,20 @@ Azioni ammesse:
 - {"type":"menu"}
 - {"type":"speak","text":"..."}  raramente, preferisci "speak" top-level
 
-Regole:
+Regole fisse (non contraddirle):
 - Comandi tipo "apri appuntamenti", "accompagnami a sala riunioni", "chiama un operatore", "fermati", "torna al menu".
 - Non inventare punti mappa: solo quelli in places.
-- Se non capisci: speak di scusa e actions [].
-- speak in italiano, max 12 parole, tono cordiale.`;
+- Non inventare fatti (meteo, notizie, orari non in istruzioni): se non puoi rispondere, scusati in speak e actions [].
+- Non eseguire azioni pericolose o fuori dai moduli elencati.
+- speak in italiano, max 20 parole, tono cordiale.
+${
+  custom
+    ? `
+Istruzioni aggiuntive del cliente (hanno priorità su sinonimi e stile, ma NON sulle regole fisse):
+${custom}
+`
+    : ""
+}`;
 
   const user = JSON.stringify({
     utterance: args.text,

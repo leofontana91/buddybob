@@ -4,7 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -18,7 +18,7 @@ import com.buddybob.robot.robot.ReceptionController
 
 class ReceptionFragment : Fragment() {
 
-    private lateinit var panelIdle: LinearLayout
+    private lateinit var panelIdle: View
     private lateinit var panelGreeting: LinearLayout
     private lateinit var panelMenu: LinearLayout
     private lateinit var textGreeting: TextView
@@ -47,10 +47,10 @@ class ReceptionFragment : Fragment() {
         recyclerMenu.layoutManager = GridLayoutManager(requireContext(), 2)
         bindMenu()
 
-        root.findViewById<Button>(R.id.btn_idle_settings).setOnClickListener {
+        root.findViewById<ImageButton>(R.id.btn_idle_settings).setOnClickListener {
             SettingsGate.prompt(this)
         }
-        root.findViewById<Button>(R.id.btn_menu_settings).setOnClickListener {
+        root.findViewById<ImageButton>(R.id.btn_menu_settings).setOnClickListener {
             SettingsGate.prompt(this)
         }
         panelGreeting.setOnClickListener {

@@ -100,6 +100,8 @@ model RobotSettings {
   placeContentMode  String @default("per_place")
   /// JSON PlaceContent usato se placeContentMode = shared
   placeSharedJson   String @default("{}")
+  /// Istruzioni custom per l'AI vocale (sinonimi, cosa può/non può rispondere)
+  voiceInstructions String @default("")
 }
 
 model Appointment {

@@ -79,6 +79,7 @@
     <string name="pairing_error">Associazione non riuscita</string>
     <string name="pairing_menu">Associa robot</string>
     <string name="robot_settings">Impostazioni</string>
+    <string name="robot_settings_gear">Apri impostazioni</string>
     <string name="robot_settings_pin_hint">Password</string>
     <string name="robot_settings_pin_msg">Inserisci la password impostata nel pannello web.</string>
     <string name="robot_settings_open">Apri</string>
