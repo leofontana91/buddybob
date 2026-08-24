@@ -47,6 +47,9 @@ class ReceptionFragment : Fragment() {
         recyclerMenu.layoutManager = GridLayoutManager(requireContext(), 2)
         bindMenu()
 
+        panelIdle.setOnClickListener {
+            reception.simulateGuest()
+        }
         root.findViewById<ImageButton>(R.id.btn_idle_settings).setOnClickListener {
             SettingsGate.prompt(this)
         }

@@ -5,6 +5,7 @@ import android.os.Looper
 import android.util.Log
 import com.ainirobot.coreservice.client.listener.Person
 import com.buddybob.robot.BuddybobApp
+import com.buddybob.robot.MainActivity
 import com.buddybob.robot.config.BobConfig
 import kotlin.math.abs
 
@@ -83,6 +84,13 @@ class ReceptionController(
         if (!BuddybobApp.instance.config.current.modules.reception) return
         if (!listening) startListening()
         if (phase != Phase.IDLE) return
+        val now = System.currentTimeMillis()
+        if (now - lastGreetingAtMs < REGREET_MS) return
+        // Nessuna persona reale: non armare il timeout di assenza, altrimenti
+        // il menu si chiude dopo pochi secondi. Torna in idle dal menu o reset.
+        guestPresent = false
+        presentSinceMs = 0L
+        absentSinceMs = 0L
         beginGreeting(person = null)
     }
 
@@ -256,6 +264,14 @@ class ReceptionController(
         val place = BuddybobApp.instance.config.current.reception.standbyPlace.trim()
         if (place.isBlank()) return
         runCatching {
+            val act = BuddybobApp.instance.currentActivity as? MainActivity
+            val cfg = BuddybobApp.instance.robot.placeContent.get(place)
+            val label = cfg?.labelOrName() ?: place
+            act?.showMovingPlaceholder(
+                destinationLabel = label,
+                text = cfg?.displayWhileMoving,
+                media = cfg?.mediaWhileMoving
+            )
             BuddybobApp.instance.robot.navigation.startNavigation(place)
         }
     }

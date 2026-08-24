@@ -23,6 +23,10 @@ class SpeechController {
     fun setListeningDesired(enabled: Boolean) {
         listeningDesired = enabled
         applyRecognition()
+        if (enabled) {
+            // Di default ascolta solo il cono frontale (non laterale/dietro).
+            resetMicToFront()
+        }
     }
 
     private fun applyRecognition() {
@@ -30,6 +34,32 @@ class SpeechController {
         val on = listeningDesired && !speaking
         api.setRecognizable(on)
         if (on) api.setRecognizeMode(true)
+    }
+
+    /**
+     * Limita il microfono a un cono: [centerDeg] rispetto al robot,
+     * [rangeDeg] ampiezza (parametri OrionStar setAngleCenterRange).
+     */
+    fun setMicAngle(centerDeg: Float, rangeDeg: Float = LOCKED_RANGE_DEG) {
+        val api = skill() ?: return
+        val center = centerDeg.coerceIn(-90f, 90f)
+        val range = rangeDeg.coerceIn(20f, 120f)
+        runCatching {
+            api.setAngleCenterRange(center, range)
+            Log.d(TAG, "mic angle center=$center range=$range")
+        }.onFailure {
+            Log.w(TAG, "setAngleCenterRange failed: ${it.message}")
+        }
+    }
+
+    /** Ascolto generico solo di fronte (prima della wake word). */
+    fun resetMicToFront() {
+        setMicAngle(0f, FRONT_RANGE_DEG)
+    }
+
+    /** Punta il microfono verso una persona (angolo PersonApi). */
+    fun aimMicAtPersonAngle(personAngleDeg: Int) {
+        setMicAngle(personAngleDeg.toFloat(), LOCKED_RANGE_DEG)
     }
 
     fun speak(
@@ -99,5 +129,9 @@ class SpeechController {
 
     companion object {
         private const val TAG = "SpeechController"
+        /** Cono frontale per sentire «Bob» da chi è davanti. */
+        const val FRONT_RANGE_DEG = 70f
+        /** Cono più stretto dopo il lock sulla persona. */
+        const val LOCKED_RANGE_DEG = 45f
     }
 }

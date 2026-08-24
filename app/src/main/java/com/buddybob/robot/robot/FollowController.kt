@@ -74,6 +74,27 @@ class FollowController {
         }
     }
 
+    fun getFocusPerson(): Person? {
+        return try {
+            PersonApi.getInstance().focusPerson
+        } catch (e: Exception) {
+            Log.w(TAG, "getFocusPerson failed: ${e.message}")
+            null
+        }
+    }
+
+    /** Persone nel cono frontale entro [maxDistanceMeters]. */
+    fun getPersonsInFront(
+        maxDistanceMeters: Double = 3.0,
+        maxAbsAngleDeg: Double = 45.0
+    ): List<Person> {
+        return getVisiblePersons(maxDistanceMeters).filter { p ->
+            val d = p.distance
+            d > 0.2 && d <= maxDistanceMeters &&
+                kotlin.math.abs(p.angle.toDouble()) <= maxAbsAngleDeg
+        }.sortedBy { kotlin.math.abs(it.angle) }
+    }
+
     /**
      * Start focus follow on [faceId].
      * If faceId is null, picks the best complete face currently visible.

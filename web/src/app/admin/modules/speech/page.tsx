@@ -8,6 +8,8 @@ type Preview = {
   actions: { type: string; module?: string; placeName?: string }[];
   source: string;
   aiConfigured: boolean;
+  memoryTurns?: number;
+  newTopic?: boolean;
 };
 
 const EXAMPLE_INSTRUCTIONS = `Se dicono «accompagnami», «portami» o «vieni con me» tratta come un comando vai a (goto) verso il punto citato.
@@ -75,7 +77,11 @@ export default function SpeechModulePage() {
     const res = await fetch("/api/admin/voice", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ robotId, text: text.trim() }),
+      body: JSON.stringify({
+        robotId,
+        text: text.trim(),
+        sessionKey: "admin-preview",
+      }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -161,20 +167,22 @@ export default function SpeechModulePage() {
       >
         <h2 className="font-semibold">Prova una frase</h2>
         <p className="text-sm text-[var(--bob-muted)]">
-          Usa le istruzioni già salvate (salva prima se le hai appena modificate).
+          Le prove consecutive tengono memoria del discorso (come sul robot). Usa
+          «Nuova conversazione» per azzerare.
         </p>
         <input
           className="w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Accompagnami in sala riunioni"
+          placeholder="Vorrei un appuntamento"
         />
         <div className="flex flex-wrap gap-2 text-sm">
           {[
-            "Apri appuntamenti",
-            "Chiama un operatore",
+            "Vorrei un appuntamento",
+            "Alle undici va bene?",
             "Accompagnami in reception",
-            "Che tempo fa domani?",
+            "E poi torniamo indietro",
+            "Parliamo d'altro",
             "Ferma",
           ].map((ex) => (
             <button
@@ -187,15 +195,41 @@ export default function SpeechModulePage() {
             </button>
           ))}
         </div>
-        <button type="submit" className="bob-btn rounded-full px-5 py-2 font-medium">
-          Interpreta
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button type="submit" className="bob-btn rounded-full px-5 py-2 font-medium">
+            Interpreta
+          </button>
+          <button
+            type="button"
+            className="rounded-full border border-[var(--bob-line)] px-5 py-2 font-medium"
+            onClick={async () => {
+              if (!robotId) return;
+              await fetch("/api/admin/voice", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  robotId,
+                  sessionKey: "admin-preview",
+                  clearOnly: true,
+                }),
+              });
+              setPreview(null);
+              setMsg("");
+            }}
+          >
+            Nuova conversazione
+          </button>
+        </div>
         {msg ? <p className="text-sm text-red-700">{msg}</p> : null}
         {preview ? (
           <div className="text-sm space-y-1 pt-2 border-t border-[var(--bob-line)]">
             <p>
               Fonte: <strong>{preview.source}</strong>
               {preview.aiConfigured ? " · AI disponibile" : " · solo regole"}
+              {typeof preview.memoryTurns === "number"
+                ? ` · turni in memoria: ${preview.memoryTurns}`
+                : ""}
+              {preview.newTopic ? " · nuovo argomento" : ""}
             </p>
             <p>
               Dice: <strong>{preview.speak}</strong>

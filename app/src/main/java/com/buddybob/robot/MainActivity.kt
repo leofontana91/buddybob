@@ -8,6 +8,7 @@ import android.os.Looper
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.VideoView
 import androidx.appcompat.app.AppCompatActivity
@@ -30,6 +31,7 @@ class MainActivity : AppCompatActivity() {
 
     private val handler = Handler(Looper.getMainLooper())
     private var inactivityRunnable: Runnable? = null
+    private var transcriptHideRunnable: Runnable? = null
     private val imageClient = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
@@ -78,7 +80,48 @@ class MainActivity : AppCompatActivity() {
             .commitAllowingStateLoss()
     }
 
-    fun showPlaceDisplay(text: String?, media: PlaceContentStore.Media?) {
+    /** Barra in basso: testo ASR dopo wake word / sessione attiva. */
+    fun showVoiceTranscript(text: String, final: Boolean) {
+        handler.post {
+            val bar = findViewById<LinearLayout?>(R.id.bar_voice_transcript) ?: return@post
+            val label = findViewById<TextView?>(R.id.text_voice_transcript) ?: return@post
+            label.text = text.trim()
+            bar.visibility = View.VISIBLE
+            transcriptHideRunnable?.let { handler.removeCallbacks(it) }
+            if (final) {
+                val hide = Runnable {
+                    findViewById<LinearLayout?>(R.id.bar_voice_transcript)?.visibility =
+                        View.GONE
+                }
+                transcriptHideRunnable = hide
+                handler.postDelayed(hide, 6_000L)
+            }
+        }
+    }
+
+    fun hideVoiceTranscript() {
+        handler.post {
+            transcriptHideRunnable?.let { handler.removeCallbacks(it) }
+            findViewById<LinearLayout?>(R.id.bar_voice_transcript)?.visibility = View.GONE
+        }
+    }
+
+    /** Overlay durante lo spostamento: media configurato oppure logo BOB. */
+    fun showMovingPlaceholder(
+        destinationLabel: String,
+        text: String?,
+        media: PlaceContentStore.Media?
+    ) {
+        val caption = text?.trim()?.takeIf { it.isNotEmpty() }
+            ?: getString(R.string.voice_moving_placeholder, destinationLabel)
+        showPlaceDisplay(caption, media, logoIfNoMedia = true)
+    }
+
+    fun showPlaceDisplay(
+        text: String?,
+        media: PlaceContentStore.Media?,
+        logoIfNoMedia: Boolean = false
+    ) {
         handler.post {
             val overlay = findViewById<FrameLayout?>(R.id.overlay_place_media) ?: return@post
             val image = findViewById<ImageView>(R.id.overlay_place_image)
@@ -93,7 +136,7 @@ class MainActivity : AppCompatActivity() {
             val hasText = !text.isNullOrBlank()
             val url = media?.url?.trim().orEmpty()
             val type = media?.contentType.orEmpty()
-            if (!hasText && url.isBlank()) {
+            if (!hasText && url.isBlank() && !logoIfNoMedia) {
                 overlay.visibility = View.GONE
                 return@post
             }
@@ -107,7 +150,13 @@ class MainActivity : AppCompatActivity() {
             }
 
             when {
-                url.isBlank() -> Unit
+                url.isBlank() -> {
+                    if (logoIfNoMedia) {
+                        image.setImageResource(R.drawable.logo_bob_mark)
+                        image.scaleType = ImageView.ScaleType.CENTER_INSIDE
+                        image.visibility = View.VISIBLE
+                    }
+                }
                 type.startsWith("video/") || url.endsWith(".mp4") || url.endsWith(".webm") -> {
                     video.visibility = View.VISIBLE
                     video.setVideoURI(Uri.parse(url))
@@ -116,9 +165,19 @@ class MainActivity : AppCompatActivity() {
                         video.start()
                     }
                 }
-                type.startsWith("audio/") -> Unit
+                type.startsWith("audio/") -> {
+                    if (logoIfNoMedia) {
+                        image.setImageResource(R.drawable.logo_bob_mark)
+                        image.scaleType = ImageView.ScaleType.CENTER_INSIDE
+                        image.visibility = View.VISIBLE
+                    }
+                }
                 else -> {
                     image.visibility = View.VISIBLE
+                    image.scaleType = ImageView.ScaleType.FIT_CENTER
+                    if (logoIfNoMedia) {
+                        image.setImageResource(R.drawable.logo_bob_mark)
+                    }
                     Thread {
                         val bmp = runCatching {
                             val req = Request.Builder().url(url).build()
@@ -128,7 +187,13 @@ class MainActivity : AppCompatActivity() {
                             }
                         }.getOrNull()
                         handler.post {
-                            if (bmp != null) image.setImageBitmap(bmp)
+                            if (bmp != null) {
+                                image.setImageBitmap(bmp)
+                                image.scaleType = ImageView.ScaleType.FIT_CENTER
+                            } else if (logoIfNoMedia) {
+                                image.setImageResource(R.drawable.logo_bob_mark)
+                                image.scaleType = ImageView.ScaleType.CENTER_INSIDE
+                            }
                         }
                     }.start()
                 }
@@ -183,6 +248,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
     fun onGuestDetectedWhileAway() {
         if (!inSubFeature) return
         handler.post { openReceptionOrHome() }
@@ -218,6 +284,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         cancelInactivityTimer()
         hidePlaceDisplay()
+        hideVoiceTranscript()
         handler.removeCallbacksAndMessages(null)
         super.onDestroy()
     }

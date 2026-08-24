@@ -215,8 +215,15 @@ class PlatformApi {
         executeRaw(req)
     }
 
-    fun postVoice(text: String): VoiceResponse {
-        val body = gson.toJson(mapOf("text" to text))
+    fun postVoice(
+        text: String,
+        sessionKey: String? = null,
+        reset: Boolean = false
+    ): VoiceResponse {
+        val payload = mutableMapOf<String, Any>("text" to text)
+        if (!sessionKey.isNullOrBlank()) payload["sessionKey"] = sessionKey
+        if (reset) payload["reset"] = true
+        val body = gson.toJson(payload)
         val req = auth(
             Request.Builder()
                 .url("${baseUrl()}/api/robots/${robotId()}/voice")

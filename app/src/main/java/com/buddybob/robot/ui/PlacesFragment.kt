@@ -175,12 +175,11 @@ class PlacesFragment : Fragment() {
                     speech.speak(it)
                 }
                 mainHandler.post {
-                    if (!extra?.displayWhileMoving.isNullOrBlank() || extra?.mediaWhileMoving != null) {
-                        (activity as? MainActivity)?.showPlaceDisplay(
-                            extra?.displayWhileMoving,
-                            extra?.mediaWhileMoving
-                        )
-                    }
+                    (activity as? MainActivity)?.showMovingPlaceholder(
+                        destinationLabel = label,
+                        text = extra?.displayWhileMoving,
+                        media = extra?.mediaWhileMoving
+                    )
                 }
 
                 waitForNavigation()

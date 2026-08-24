@@ -27,7 +27,7 @@ class SpeechFragment : Fragment() {
         speech.onTtsState = { feedback.append("\n$it") }
 
         feedback.text =
-            "Dimmi ad esempio:\n«Apri appuntamenti»\n«Accompagnami in reception»\n«Chiama un operatore»\n«Ferma»\n«Torna al menu»"
+            "Stai di fronte, di' «Bob» e parla: BOB ricorda il discorso finché resti tu.\nCambio persona o argomento = nuova conversazione.\nEsempi:\n«Bob, vorrei un appuntamento» → poi «alle undici»\n«Bob, accompagnami in reception»"
 
         root.findViewById<Button>(R.id.btn_speak).visibility = View.GONE
         root.findViewById<View>(R.id.edit_tts).visibility = View.GONE

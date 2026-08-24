@@ -9,11 +9,20 @@ import {
   resolveVoiceRules,
   type VoicePlace,
 } from "@/lib/voiceIntent";
+import {
+  appendVoiceTurn,
+  clearVoiceHistory,
+  getVoiceHistory,
+} from "@/lib/voiceMemory";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 const schema = z.object({
   text: z.string().trim().min(1).max(400),
+  /** Id persona / sessione: stessa chiave = stesso discorso in memoria. */
+  sessionKey: z.string().trim().min(1).max(80).optional(),
+  /** Forza azzeramento memoria (cambio persona lato robot). */
+  reset: z.boolean().optional(),
 });
 
 export async function POST(req: Request, ctx: Ctx) {
@@ -51,22 +60,42 @@ export async function POST(req: Request, ctx: Ctx) {
 
   const settings = await prisma.robotSettings.findUnique({ where: { robotId: id } });
   const text = parsed.data.text;
+  const sessionKey = parsed.data.sessionKey?.trim() || "default";
+
+  if (parsed.data.reset) {
+    clearVoiceHistory(id, sessionKey);
+  }
+
+  const history = getVoiceHistory(id, sessionKey);
   const fromAi = await resolveVoiceWithAi({
     text,
     places,
     modules,
     instructions: settings?.voiceInstructions,
+    history,
   });
+
   const result =
     fromAi ??
     resolveVoiceRules({ text, places, modules }) ?? {
-      speak: "Non ho capito. Puoi dire ad esempio «apri appuntamenti» o «accompagnami in reception».",
+      speak:
+        "Non ho capito. Puoi dire ad esempio «apri appuntamenti» o «accompagnami in reception».",
       actions: [],
       source: "rules" as const,
     };
 
+  if (fromAi?.newTopic) {
+    clearVoiceHistory(id, sessionKey);
+  }
+  appendVoiceTurn(id, sessionKey, text, result.speak);
+
   return NextResponse.json({
-    ...result,
+    speak: result.speak,
+    actions: result.actions,
+    source: result.source,
     aiConfigured: openaiConfigured(),
+    memoryTurns: getVoiceHistory(id, sessionKey).filter((m) => m.role === "user")
+      .length,
+    newTopic: fromAi?.newTopic === true,
   });
 }

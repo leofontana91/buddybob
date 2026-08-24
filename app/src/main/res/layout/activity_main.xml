@@ -12,6 +12,40 @@
         android:layout_height="match_parent"
         tools:layout="@layout/fragment_home" />
 
+    <!-- Barra trascrizione: cosa ha capito BOB (dopo wake word) -->
+    <LinearLayout
+        android:id="@+id/bar_voice_transcript"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@color/bob_navy"
+        android:orientation="vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="16dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/voice_heard_label"
+            android:textColor="@color/bob_cyan"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/text_voice_transcript"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:ellipsize="end"
+            android:maxLines="3"
+            android:textColor="@color/bob_white"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            tools:text="Bob, accompagnami in reception" />
+    </LinearLayout>
+
     <FrameLayout
         android:id="@+id/overlay_place_media"
         android:layout_width="match_parent"

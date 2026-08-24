@@ -34,7 +34,9 @@
     <string name="status_waiting_robot">In attesa di RobotOS…</string>
 
     <string name="reception_idle_title">In attesa</string>
-    <string name="reception_idle_hint">Quando qualcuno si ferma davanti, BOB saluta e apre i comandi.</string>
+    <string name="voice_heard_label">Ho capito</string>
+    <string name="voice_moving_placeholder">Sto andando a %1$s</string>
+    <string name="reception_idle_hint">Quando qualcuno si ferma davanti, BOB saluta e apre i comandi.\nTocca lo schermo per provarlo subito.\nComandi vocali: stai di fronte e di\' «Bob», poi cosa vuoi.</string>
     <string name="reception_simulate">Simula ospite</string>
     <string name="reception_face">Faccia sorridente</string>
     <string name="reception_welcome">Benvenuto</string>

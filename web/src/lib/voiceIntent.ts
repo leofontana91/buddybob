@@ -254,7 +254,9 @@ export function voiceCatalog(args: {
   return { modules, places, goToEnabled: !!args.modules.goTo };
 }
 
-export function parseVoiceAiJson(raw: string): VoiceResult | null {
+export function parseVoiceAiJson(
+  raw: string
+): (VoiceResult & { newTopic?: boolean }) | null {
   try {
     const cleaned = raw
       .trim()
@@ -264,6 +266,7 @@ export function parseVoiceAiJson(raw: string): VoiceResult | null {
     const o = JSON.parse(cleaned) as {
       speak?: string;
       actions?: VoiceAction[];
+      newTopic?: boolean;
     };
     if (!o || typeof o.speak !== "string") return null;
     const actions = Array.isArray(o.actions) ? o.actions : [];
@@ -271,6 +274,7 @@ export function parseVoiceAiJson(raw: string): VoiceResult | null {
       speak: o.speak.trim() || "Ok.",
       actions: actions.filter(isVoiceAction),
       source: "ai",
+      newTopic: o.newTopic === true,
     };
   } catch {
     return null;

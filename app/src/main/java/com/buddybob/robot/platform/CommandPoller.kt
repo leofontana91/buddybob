@@ -251,9 +251,12 @@ class CommandPoller {
         when (phase) {
             "depart" -> act.showPlaceDisplay(cfg?.displayOnDepart, cfg?.mediaOnDepart)
             "moving" -> {
-                if (!cfg?.displayWhileMoving.isNullOrBlank() || cfg?.mediaWhileMoving != null) {
-                    act.showPlaceDisplay(cfg?.displayWhileMoving, cfg?.mediaWhileMoving)
-                }
+                val label = cfg?.labelOrName().orEmpty()
+                act.showMovingPlaceholder(
+                    destinationLabel = label.ifBlank { "…" },
+                    text = cfg?.displayWhileMoving,
+                    media = cfg?.mediaWhileMoving
+                )
             }
             "arrive" -> act.showPlaceDisplay(cfg?.displayOnArrive, cfg?.mediaOnArrive)
         }

@@ -48,6 +48,7 @@ class BuddybobApp : Application() {
         speechCallback.listener = object : BuddySpeechCallback.Listener {
             override fun onPartial(text: String) {
                 robot.log("ASR partial: $text")
+                voiceRouter.onAsrPartial(text)
             }
 
             override fun onFinal(text: String) {
@@ -129,6 +130,7 @@ class BuddybobApp : Application() {
                 robot.onSpeechReady(true)
                 if (config.current.modules.speech) {
                     robot.speech.setListeningDesired(true)
+                    robot.speech.resetMicToFront()
                 }
                 Log.i(TAG, "SkillApi connected")
             }
