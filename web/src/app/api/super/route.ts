@@ -10,6 +10,7 @@ import {
   AdminModules,
 } from "@/lib/modules";
 import { newActivationToken, sendActivationEmail } from "@/lib/mail";
+import { publicAppUrl } from "@/lib/appUrl";
 
 export async function GET() {
   const session = await requireSession(["SUPER_ADMIN"]);
@@ -173,7 +174,7 @@ export async function POST(req: Request) {
       .replace(/^-|-$/g, "")
       .slice(0, 40)}`;
     const apiKey = `bob_${randomBytes(16).toString("hex")}`;
-    const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const base = publicAppUrl(req);
 
     const admin = await prisma.account.create({
       data: {
@@ -216,6 +217,7 @@ export async function POST(req: Request) {
       companyName: d.companyName,
       personName: d.name,
       token,
+      baseUrl: base,
     });
 
     return NextResponse.json({
@@ -322,6 +324,7 @@ export async function POST(req: Request) {
       companyName: admin.companyName ?? admin.name,
       personName: admin.name,
       token,
+      baseUrl: publicAppUrl(req),
     });
     return NextResponse.json({
       ok: true,

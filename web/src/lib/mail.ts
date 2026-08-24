@@ -1,17 +1,19 @@
 import { randomBytes } from "crypto";
 
+import { publicAppUrl } from "./appUrl";
+
 /**
  * Local/dev: logs activation link (also returned to Super Admin UI).
- * Production: set SMTP_* env vars — uses fetch to a simple SMTP relay is optional;
- * for now we always log + return URL. Wire Resend/SMTP when deploying.
+ * Production: set RESEND_API_KEY to send mail; otherwise Super Admin copies the URL.
  */
 export async function sendActivationEmail(opts: {
   to: string;
   companyName: string;
   personName: string;
   token: string;
+  baseUrl?: string;
 }): Promise<{ sent: boolean; activationUrl: string }> {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const base = (opts.baseUrl ?? publicAppUrl()).replace(/\/$/, "");
   const activationUrl = `${base}/activate?token=${encodeURIComponent(opts.token)}`;
 
   const subject = "Attiva il tuo account BOB Admin";
