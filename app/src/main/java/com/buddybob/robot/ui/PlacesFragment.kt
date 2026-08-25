@@ -168,8 +168,14 @@ class PlacesFragment : Fragment() {
                 speech.speak(going)
 
                 withContext(Dispatchers.Main) {
+                    // Pulisci stato precedente altrimenti waitForNavigation esce subito
+                    nav.lastStatusTextForWaitClear()
+                    status.text = getString(R.string.places_going, label)
                     nav.startNavigation(place.name)
                 }
+
+                // startNavigation rilascia il chassis e parte dopo ~700ms
+                delay(1200)
 
                 extra?.speakWhileMoving?.trim()?.takeIf { it.isNotBlank() }?.let {
                     speech.speak(it)
@@ -238,22 +244,29 @@ class PlacesFragment : Fragment() {
     }
 
     private suspend fun waitForNavigation() {
-        // Poll navigation status for up to 120 seconds
+        val nav = BuddybobApp.instance.robot.navigation
         var elapsed = 0
         while (routeRunning && elapsed < 120) {
-            delay(2000)
-            elapsed += 2
-            // NavigationController sets status via onStatus callback;
-            // we check if it reported completion or error
-            val statusText = withContext(Dispatchers.Main) { status.text.toString() }
-            if (statusText.contains("result status=") ||
-                statusText.contains("Already at") ||
-                statusText.contains("Cannot reach") ||
-                statusText.contains("Destination missing") ||
-                statusText.contains("Not localized") ||
-                statusText.contains("error")
-            ) break
+            delay(1000)
+            elapsed += 1
+            // Usa lastStatusText del controller (non la TextView: poteva restare il risultato vecchio)
+            val statusText = nav.lastStatusText
+            if (isNavFinished(statusText)) break
         }
+    }
+
+    private fun isNavFinished(statusText: String): Boolean {
+        if (statusText.isBlank()) return false
+        if (statusText.startsWith("Preparing") || statusText.contains("ritento")) return false
+        return statusText.contains("result status=") ||
+            statusText.contains("Already at") ||
+            statusText.contains("Cannot reach") ||
+            statusText.contains("Destination missing") ||
+            statusText.contains("Not localized") ||
+            statusText.contains("Navigation error") ||
+            statusText.contains("Nav error") ||
+            statusText == "Navigation already running" ||
+            statusText == "Chassis busy"
     }
 
     private fun stopRoute() {

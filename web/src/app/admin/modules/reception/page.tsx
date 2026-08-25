@@ -56,19 +56,19 @@ export default function ReceptionModulePage() {
   return (
     <div className="max-w-xl space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Accoglienza</h1>
-        <p className="text-[var(--bob-muted)] mt-1">
+        <h1 className="bob-page-title">Accoglienza</h1>
+        <p className="bob-page-sub">
           Password delle impostazioni sul robot e frasi di accoglienza.
         </p>
       </div>
       <form
         onSubmit={onSubmit}
-        className="rounded-2xl bg-white border border-[var(--bob-line)] p-6 space-y-4"
+        className="bob-card p-6 space-y-4"
       >
         <label className="block text-sm font-medium">
           Nome robot
           <input
-            className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            className="mt-1 w-full bob-input"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
           />
@@ -76,7 +76,7 @@ export default function ReceptionModulePage() {
         <label className="block text-sm font-medium">
           Password impostazioni APK
           <input
-            className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            className="mt-1 w-full bob-input"
             value={settingsPin}
             onChange={(e) => setSettingsPin(e.target.value)}
             minLength={4}
@@ -86,7 +86,7 @@ export default function ReceptionModulePage() {
         <label className="block text-sm font-medium">
           Frase chiama operatore
           <input
-            className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            className="mt-1 w-full bob-input"
             value={callOperatorSpeak}
             onChange={(e) => setCallOperatorSpeak(e.target.value)}
           />
@@ -95,7 +95,7 @@ export default function ReceptionModulePage() {
           Il punto di accoglienza si sceglie sul robot (Impostazioni). Punti
           noti: {places.map((p) => p.name).join(", ") || "nessuno ancora"}.
         </p>
-        <button type="submit" className="bob-btn rounded-full px-6 py-2.5 font-medium">
+        <button type="submit" className="bob-btn px-6 py-2.5 font-medium">
           Salva
         </button>
         {saved ? <p className="text-sm text-[var(--bob-teal)]">Salvato.</p> : null}

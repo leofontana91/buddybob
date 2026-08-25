@@ -4,6 +4,7 @@ import android.os.RemoteException
 import android.util.Log
 import com.ainirobot.coreservice.client.RobotApi
 import com.ainirobot.coreservice.client.module.ModuleCallbackApi
+import com.buddybob.robot.BuddybobApp
 
 /**
  * Receives voice NLP requests and system suspend/recovery events from RobotOS.
@@ -27,6 +28,17 @@ class BuddyModuleCallback : ModuleCallbackApi() {
     ): Boolean {
         Log.d(TAG, "voice reqId=$reqId type=$reqType text=$reqText param=$reqParam")
         listener?.onVoiceRequest(reqId, reqType, reqText, reqParam)
+        // Intercetta wake/NLP di RobotOS così non parte il saluto di sistema («Hi», ecc.).
+        val type = reqType.lowercase()
+        val text = reqText.trim().lowercase()
+        if (type.contains("wakeup") ||
+            type.contains("wake") ||
+            text == "hi" ||
+            text == "hello" ||
+            text == "hey"
+        ) {
+            runCatching { BuddybobApp.instance.getSkillApi()?.stopTTS() }
+        }
         // Always finish the parser so RobotOS does not hang on the command.
         RobotApi.getInstance().finishModuleParser(reqId, true)
         return true

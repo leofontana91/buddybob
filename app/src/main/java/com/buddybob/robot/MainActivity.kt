@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
+import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -16,6 +17,7 @@ import androidx.fragment.app.Fragment
 import com.buddybob.robot.platform.PlaceContentStore
 import com.buddybob.robot.ui.AccessControlFragment
 import com.buddybob.robot.ui.AppointmentsHubFragment
+import com.buddybob.robot.ui.TodayAppointmentsFragment
 import com.buddybob.robot.ui.CallOperatorFragment
 import com.buddybob.robot.ui.DocumentsFragment
 import com.buddybob.robot.ui.HomeFragment
@@ -23,6 +25,8 @@ import com.buddybob.robot.ui.PlaceholderFeatureFragment
 import com.buddybob.robot.ui.PlacesFragment
 import com.buddybob.robot.ui.ReceptionFragment
 import com.buddybob.robot.ui.SpeechFragment
+import com.buddybob.robot.ui.VoiceMemosFragment
+import com.buddybob.robot.ui.widget.SystemStatusBinder
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
@@ -32,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private var inactivityRunnable: Runnable? = null
     private var transcriptHideRunnable: Runnable? = null
+    private var statusBinder: SystemStatusBinder? = null
     private val imageClient = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
@@ -42,12 +47,39 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyImmersiveChrome()
         setContentView(R.layout.activity_splash)
 
         handler.postDelayed({
             setContentView(R.layout.activity_main)
+            applyImmersiveChrome()
+            bindSystemStatus()
             openReceptionOrHome()
         }, 700)
+    }
+
+    /** Nasconde la status bar di sistema (icone sgranate) e usa la nostra. */
+    private fun applyImmersiveChrome() {
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+        window.statusBarColor = getColor(R.color.bob_black)
+        window.navigationBarColor = getColor(R.color.bob_black)
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility = (
+            View.SYSTEM_UI_FLAG_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            )
+    }
+
+    private fun bindSystemStatus() {
+        statusBinder?.stop()
+        val bar = findViewById<View?>(R.id.bar_system_status) ?: return
+        statusBinder = SystemStatusBinder(bar).also { it.start() }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) applyImmersiveChrome()
     }
 
     fun openReceptionOrHome() {
@@ -67,7 +99,12 @@ class MainActivity : AppCompatActivity() {
         hidePlaceDisplay()
         replaceFragment(fragment)
         if (inSubFeature) {
-            startInactivityTimer()
+            // Conversazione libera: niente timeout che chiude la schermata
+            if (fragment is SpeechFragment) {
+                cancelInactivityTimer()
+            } else {
+                startInactivityTimer()
+            }
         } else {
             cancelInactivityTimer()
         }
@@ -80,22 +117,34 @@ class MainActivity : AppCompatActivity() {
             .commitAllowingStateLoss()
     }
 
-    /** Barra in basso: testo ASR dopo wake word / sessione attiva. */
+    /** Barra in basso: un solo testo (ascoltato), si aggiorna al posto. */
     fun showVoiceTranscript(text: String, final: Boolean) {
         handler.post {
             val bar = findViewById<LinearLayout?>(R.id.bar_voice_transcript) ?: return@post
-            val label = findViewById<TextView?>(R.id.text_voice_transcript) ?: return@post
-            label.text = text.trim()
+            val label = findViewById<TextView?>(R.id.label_voice_heard)
+            val body = findViewById<TextView?>(R.id.text_voice_transcript) ?: return@post
+            label?.setText(R.string.voice_heard_label)
+            label?.setTextColor(getColor(R.color.bob_teal))
+            body.text = ensureQuestionMark(text.trim())
             bar.visibility = View.VISIBLE
-            transcriptHideRunnable?.let { handler.removeCallbacks(it) }
-            if (final) {
-                val hide = Runnable {
-                    findViewById<LinearLayout?>(R.id.bar_voice_transcript)?.visibility =
-                        View.GONE
-                }
-                transcriptHideRunnable = hide
-                handler.postDelayed(hide, 6_000L)
-            }
+            scheduleTranscriptHide(if (final) 5_000L else 8_000L)
+        }
+    }
+
+    /** Cosa sta dicendo BOB: sostituisce lo stesso spazio (non aggiunge una seconda riga). */
+    fun showVoiceSaid(text: String) {
+        handler.post {
+            val bar = findViewById<LinearLayout?>(R.id.bar_voice_transcript) ?: return@post
+            val label = findViewById<TextView?>(R.id.label_voice_heard)
+            val body = findViewById<TextView?>(R.id.text_voice_transcript) ?: return@post
+            val trimmed = ensureQuestionMark(text.trim())
+            if (trimmed.isEmpty()) return@post
+            label?.setText(R.string.voice_said_label)
+            label?.setTextColor(getColor(R.color.bob_navy))
+            body.text = trimmed
+            bar.visibility = View.VISIBLE
+            val hideMs = (trimmed.length * 55L).coerceIn(4_000L, 10_000L)
+            scheduleTranscriptHide(hideMs)
         }
     }
 
@@ -106,12 +155,35 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun scheduleTranscriptHide(delayMs: Long) {
+        transcriptHideRunnable?.let { handler.removeCallbacks(it) }
+        val hide = Runnable {
+            findViewById<LinearLayout?>(R.id.bar_voice_transcript)?.visibility = View.GONE
+        }
+        transcriptHideRunnable = hide
+        handler.postDelayed(hide, delayMs)
+    }
+
+    /** ASR / TTS spesso omettono «?»: aggiungilo sulle domande italiane ovvie. */
+    private fun ensureQuestionMark(raw: String): String {
+        val t = raw.trim()
+        if (t.isEmpty() || t.endsWith("?") || t.endsWith("！") || t.endsWith("…")) return t
+        val lower = t.lowercase()
+        val startsQuestion = Regex(
+            "^(chi|che|cosa|come|dove|quando|perché|perche|quanto|quale|quali|" +
+                "puoi|potresti|vuoi|vorresti|sai|mi (puoi|sai|dici)|" +
+                "hai |c'?è |ci sono|posso|possiamo)\\b"
+        ).containsMatchIn(lower)
+        return if (startsQuestion) "$t?" else t
+    }
+
     /** Overlay durante lo spostamento: media configurato oppure logo BOB. */
     fun showMovingPlaceholder(
         destinationLabel: String,
         text: String?,
         media: PlaceContentStore.Media?
     ) {
+        BuddybobApp.instance.robot.avatar.onMoving()
         val caption = text?.trim()?.takeIf { it.isNotEmpty() }
             ?: getString(R.string.voice_moving_placeholder, destinationLabel)
         showPlaceDisplay(caption, media, logoIfNoMedia = true)
@@ -207,6 +279,9 @@ class MainActivity : AppCompatActivity() {
             stopVideo()
             findViewById<ImageView?>(R.id.overlay_place_image)?.setImageDrawable(null)
             overlay.visibility = View.GONE
+            BuddybobApp.instance.robot.avatar.onVoiceIdle(
+                BuddybobApp.instance.robot.reception.phase
+            )
         }
     }
 
@@ -220,16 +295,22 @@ class MainActivity : AppCompatActivity() {
     fun openModule(moduleId: String) {
         val fragment: Fragment = when (moduleId) {
             "appointments" -> AppointmentsHubFragment.newInstance()
+            "appointmentsToday" -> TodayAppointmentsFragment.newInstance()
             "documents" -> DocumentsFragment.newInstance()
             "goTo" -> PlacesFragment.newInstance()
             "talkToMe" -> SpeechFragment.newInstance()
             "callOperator" -> CallOperatorFragment.newInstance()
             "accessControl" -> AccessControlFragment.newInstance()
             "games" -> PlaceholderFeatureFragment.newInstance("games", "Giochi")
-            "voiceMemos" -> PlaceholderFeatureFragment.newInstance("voiceMemos", "Memo vocali")
+            "voiceMemos" -> VoiceMemosFragment.newInstance(awaitStart = true)
             else -> return
         }
         switchFragment(fragment)
+    }
+
+    /** True se è aperta la schermata conversazione con Bob grande. */
+    fun isTalkScreenOpen(): Boolean {
+        return supportFragmentManager.fragments.any { it is SpeechFragment && it.isVisible }
     }
 
     /** Menu moduli aggiornato dalla piattaforma. */
@@ -282,6 +363,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        statusBinder?.stop()
+        statusBinder = null
         cancelInactivityTimer()
         hidePlaceDisplay()
         hideVoiceTranscript()

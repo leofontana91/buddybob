@@ -126,7 +126,7 @@ function MediaField({
         </div>
       ) : (
         <label className="block">
-          <span className="inline-flex rounded-full border border-[var(--bob-line)] px-4 py-2 text-sm cursor-pointer">
+          <span className="inline-flex bob-btn-secondary px-4 py-2 text-sm cursor-pointer">
             {busy ? "Caricamento…" : "Carica foto, video o audio"}
           </span>
           <input
@@ -164,7 +164,7 @@ function MomentEditor({
         Cosa dice
         <textarea
           rows={2}
-          className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+          className="mt-1 w-full bob-input"
           placeholder="Vado a {place}"
           value={moment.speak}
           onChange={(e) => onChange({ ...moment, speak: e.target.value })}
@@ -173,7 +173,7 @@ function MomentEditor({
       <label className="text-sm block">
         Testo sul monitor
         <input
-          className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+          className="mt-1 w-full bob-input"
           placeholder="Opzionale"
           value={moment.text}
           onChange={(e) => onChange({ ...moment, text: e.target.value })}

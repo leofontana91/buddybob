@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:parentTag="android.widget.FrameLayout">
+
+    <View
+        android:id="@+id/bob_halo"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_margin="4dp"
+        android:alpha="0.55"
+        android:background="@drawable/bg_bob_halo" />
+
+    <!-- Scena “in attesa / dorme” (illustrazione full-bleed) -->
+    <ImageView
+        android:id="@+id/bob_idle_scene"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_margin="6dp"
+        android:alpha="0"
+        android:contentDescription="@string/bob_avatar_desc"
+        android:scaleType="centerCrop"
+        android:src="@drawable/bob_idle_sleep"
+        android:visibility="gone" />
+
+    <!--
+      Rig a livelli: ombra, braccia, corpo, scocca della testa e viso vettoriale.
+    -->
+    <com.buddybob.robot.ui.avatar.BobRigView
+        android:id="@+id/bob_rig"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@string/bob_avatar_desc" />
+
+    <TextView
+        android:id="@+id/bob_overlay_zzz1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="0dp"
+        android:layout_marginEnd="4dp"
+        android:alpha="0"
+        android:fontFamily="sans-serif-medium"
+        android:text="Z"
+        android:textColor="@color/bob_teal"
+        android:textSize="22sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/bob_overlay_zzz2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="22dp"
+        android:alpha="0"
+        android:fontFamily="sans-serif-medium"
+        android:text="z"
+        android:textColor="@color/bob_cyan"
+        android:textSize="30sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/bob_overlay_zzz3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="2dp"
+        android:alpha="0"
+        android:fontFamily="sans-serif-medium"
+        android:text="z"
+        android:textColor="@color/bob_navy"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/bob_overlay_knock"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="24dp"
+        android:alpha="0"
+        android:background="@drawable/bg_bob_bubble"
+        android:fontFamily="sans-serif-medium"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="6dp"
+        android:text="@string/bob_avatar_knock"
+        android:textColor="@color/bob_navy"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:id="@+id/bob_overlay_think_wrap"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="4dp"
+        android:alpha="0"
+        android:background="@drawable/bg_bob_bubble"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp">
+
+        <TextView
+            android:id="@+id/bob_overlay_think"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/bob_avatar_thinking"
+            android:textColor="@color/bob_navy"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/bob_sparkle1"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_gravity="top|start"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="48dp"
+        android:alpha="0"
+        android:contentDescription="@null"
+        android:src="@drawable/bob_sparkle" />
+
+    <ImageView
+        android:id="@+id/bob_sparkle2"
+        android:layout_width="14dp"
+        android:layout_height="14dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="72dp"
+        android:layout_marginEnd="24dp"
+        android:alpha="0"
+        android:contentDescription="@null"
+        android:src="@drawable/bob_sparkle" />
+
+    <ImageView
+        android:id="@+id/bob_sparkle3"
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:layout_gravity="center_vertical|start"
+        android:layout_marginStart="8dp"
+        android:alpha="0"
+        android:contentDescription="@null"
+        android:src="@drawable/bob_sparkle" />
+</merge>

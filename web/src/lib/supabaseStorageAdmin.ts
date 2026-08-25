@@ -280,3 +280,8 @@ export async function createSignedPlaceMediaUploadUrl(params: {
   };
 }
 
+/** Alias: i memo vocali usano lo stesso bucket pubblico place-media. */
+export const createSignedVoiceMemoUploadUrl = createSignedPlaceMediaUploadUrl;
+export const publicVoiceMemoUrl = publicPlaceMediaUrl;
+
+

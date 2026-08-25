@@ -40,6 +40,22 @@ class BuddybobApp : Application() {
         instance = this
         config = ConfigRepository(this).also { it.load() }
         robot = RobotFacade(this)
+        robot.speech.onSpeakingChanged = { speaking ->
+            if (speaking) {
+                robot.avatar.onSpeaking()
+            } else {
+                val talkOpen =
+                    (currentActivity as? MainActivity)?.isTalkScreenOpen() == true
+                if (talkOpen) {
+                    robot.avatar.onListening()
+                } else {
+                    robot.avatar.onVoiceIdle(robot.reception.phase)
+                }
+            }
+        }
+        robot.speech.onSpeakText = { text ->
+            (currentActivity as? MainActivity)?.showVoiceSaid(text)
+        }
         robot.reception.onGuestDetected = {
             val act = currentActivity
             if (act is MainActivity) act.onGuestDetectedWhileAway()
@@ -131,6 +147,9 @@ class BuddybobApp : Application() {
                 if (config.current.modules.speech) {
                     robot.speech.setListeningDesired(true)
                     robot.speech.resetMicToFront()
+                    runCatching {
+                        api.setWakeupHintClosed(true)
+                    }
                 }
                 Log.i(TAG, "SkillApi connected")
             }
@@ -142,6 +161,15 @@ class BuddybobApp : Application() {
         })
         api.connectApi(this)
     }
+
+    /** Pulsante microfono UI: ascolto senza ripetere «Bob». */
+    fun startVoiceListeningFromUi() = voiceRouter.armFromMic()
+
+    fun addVoiceListeningListener(listener: (Boolean) -> Unit) =
+        voiceRouter.addListeningListener(listener)
+
+    fun removeVoiceListeningListener(listener: (Boolean) -> Unit) =
+        voiceRouter.removeListeningListener(listener)
 
     companion object {
         private const val TAG = "BuddybobApp"

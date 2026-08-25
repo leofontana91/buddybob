@@ -61,7 +61,7 @@ export default function AccessPage() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Controllo accessi</h1>
+          <h1 className="bob-page-title">Controllo accessi</h1>
           <p className="text-[var(--bob-muted)] mt-1">
             Ingressi e uscite registrati dal robot (nome, cognome, orario).
           </p>
@@ -86,7 +86,7 @@ export default function AccessPage() {
             inside.map((v) => (
               <li
                 key={v.id}
-                className="rounded-2xl bg-white border border-[var(--bob-line)] px-4 py-3 flex flex-wrap items-center justify-between gap-3"
+                className="bob-card px-4 py-3 flex flex-wrap items-center justify-between gap-3"
               >
                 <div>
                   <p className="font-semibold">
@@ -98,7 +98,7 @@ export default function AccessPage() {
                 </div>
                 <button
                   type="button"
-                  className="bob-btn rounded-full px-4 py-1.5 text-sm"
+                  className="bob-btn px-4 py-1.5 text-sm"
                   onClick={() => checkout(v.id)}
                 >
                   Segna uscita
@@ -118,7 +118,7 @@ export default function AccessPage() {
             visits.map((v) => (
               <li
                 key={v.id}
-                className="rounded-2xl bg-white border border-[var(--bob-line)] px-4 py-3 flex flex-wrap justify-between gap-3"
+                className="bob-card px-4 py-3 flex flex-wrap justify-between gap-3"
               >
                 <p className="font-semibold">
                   {v.firstName} {v.lastName}

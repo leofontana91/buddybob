@@ -30,22 +30,28 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4">
+    <main className="min-h-screen relative flex items-center justify-center px-4 overflow-hidden">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 60% at 20% 10%, rgba(13,44,80,0.08), transparent 55%), radial-gradient(ellipse 70% 50% at 90% 80%, rgba(10,122,140,0.07), transparent 50%), linear-gradient(180deg, #faf9f7 0%, var(--bob-cream) 100%)",
+        }}
+      />
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-md rounded-2xl bg-white border border-[var(--bob-line)] p-8 shadow-sm"
+        className="bob-card relative w-full max-w-[400px] p-8 sm:p-10"
       >
-        <p className="text-xs tracking-[0.2em] uppercase text-[var(--bob-navy)] font-semibold">
-          BOB Robotics
-        </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight">Accedi</h1>
-        <p className="mt-1 text-[var(--bob-muted)] text-sm">
+        <p className="bob-eyebrow">BOB Robotics</p>
+        <h1 className="bob-page-title mt-3">Accedi</h1>
+        <p className="bob-page-sub">
           Super admin, admin o utente
         </p>
 
-        <label className="block mt-8 text-sm font-medium">Email</label>
+        <label className="bob-label mt-8">Email</label>
         <input
-          className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2.5 bg-[var(--bob-cream)]"
+          className="bob-input mt-1.5"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           type="email"
@@ -53,9 +59,9 @@ export default function LoginPage() {
           required
         />
 
-        <label className="block mt-4 text-sm font-medium">Password</label>
+        <label className="bob-label mt-4">Password</label>
         <input
-          className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2.5 bg-[var(--bob-cream)]"
+          className="bob-input mt-1.5"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           type="password"
@@ -63,19 +69,21 @@ export default function LoginPage() {
           required
         />
 
-        {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
+        {error ? (
+          <p className="mt-3 text-sm text-[var(--bob-danger)]">{error}</p>
+        ) : null}
 
         <button
           type="submit"
           disabled={loading}
-          className="mt-6 w-full rounded-full bg-[var(--bob-black)] text-white py-3 font-medium disabled:opacity-60"
+          className="bob-btn mt-7 w-full py-3 text-[15px]"
         >
           {loading ? "Accesso…" : "Entra"}
         </button>
 
-        <p className="mt-5 text-center">
-          <Link href="/forgot" className="bob-link text-base">
-            Password dimenticata? Recuperala
+        <p className="mt-6 text-center text-sm">
+          <Link href="/forgot" className="bob-link">
+            Password dimenticata?
           </Link>
         </p>
       </form>

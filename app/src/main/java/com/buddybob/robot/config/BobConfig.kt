@@ -85,8 +85,8 @@ data class BobConfig(
     )
 
     data class Follow(
-        val lostTimeoutSec: Int = 8,
-        val maxDistanceMeters: Double = 3.0,
+        val lostTimeoutSec: Int = 14,
+        val maxDistanceMeters: Double = 4.5,
         val preferSmartFollow: Boolean = true
     )
 
@@ -100,7 +100,7 @@ data class BobConfig(
 
     data class Reception(
         val cooldownSec: Int = 45,
-        val maxDistanceMeters: Double = 3.0,
+        val maxDistanceMeters: Double = 4.5,
         val raiseHeadVertical: Int = 35,
         val buttons: List<MenuButton> = defaultMenuButtons(),
         val settingsPin: String = "1234",

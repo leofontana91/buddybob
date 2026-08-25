@@ -55,90 +55,110 @@ export default function DashboardPage() {
 
   if (!robotId) {
     return (
-      <p className="text-[var(--bob-muted)]">
-        Nessun robot assegnato. Chiedi al super admin di associarne uno.
-      </p>
+      <div className="bob-card p-8 text-center">
+        <p className="bob-page-title text-xl">Nessun robot</p>
+        <p className="bob-page-sub max-w-sm mx-auto">
+          Chiedi al super admin di associarne uno al tuo account.
+        </p>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-[var(--bob-muted)] mt-1">
+    <div className="space-y-8">
+      <header>
+        <h1 className="bob-page-title">Dashboard</h1>
+        <p className="bob-page-sub">
           Stato in tempo reale di {status?.displayName || "BOB"}
         </p>
-      </div>
+      </header>
 
-      <div className="grid md:grid-cols-3 gap-4">
-        <div className="rounded-2xl bg-white border border-[var(--bob-line)] p-5">
-          <p className="text-xs uppercase tracking-wide text-[var(--bob-muted)]">
-            Connessione
-          </p>
-          <p className="mt-2 text-2xl font-semibold">
-            {status?.online ? "Online" : "Offline"}
-          </p>
-          <p className="text-sm text-[var(--bob-muted)] mt-1">
+      <div className="grid sm:grid-cols-3 gap-3">
+        <div className="bob-card p-5">
+          <p className="bob-label">Connessione</p>
+          <div className="mt-3 flex items-center gap-2.5">
+            <span
+              className="bob-status-dot"
+              style={{
+                background: status?.online ? "var(--bob-teal)" : "var(--bob-muted)",
+              }}
+            />
+            <p className="text-[1.35rem] font-semibold tracking-tight">
+              {status?.online ? "Online" : "Offline"}
+            </p>
+          </div>
+          <p className="text-[13px] text-[var(--bob-muted)] mt-2">
             {status?.lastSeenAt
               ? `visto ${format(new Date(status.lastSeenAt), "HH:mm:ss")}`
               : "nessun segnale dal robot"}
           </p>
         </div>
-        <div className="rounded-2xl bg-white border border-[var(--bob-line)] p-5">
-          <p className="text-xs uppercase tracking-wide text-[var(--bob-muted)]">
-            Dove si trova
-          </p>
-          <p className="mt-2 text-2xl font-semibold">
+        <div className="bob-card p-5">
+          <p className="bob-label">Dove si trova</p>
+          <p className="mt-3 text-[1.35rem] font-semibold tracking-tight">
             {status?.lastPlace || "—"}
           </p>
         </div>
-        <div className="rounded-2xl bg-white border border-[var(--bob-line)] p-5">
-          <p className="text-xs uppercase tracking-wide text-[var(--bob-muted)]">
-            Cosa sta facendo
-          </p>
-          <p className="mt-2 text-2xl font-semibold">
+        <div className="bob-card p-5">
+          <p className="bob-label">Cosa sta facendo</p>
+          <p className="mt-3 text-[1.35rem] font-semibold tracking-tight">
             {status?.lastActivity || "—"}
           </p>
         </div>
       </div>
 
-      <form
-        onSubmit={speak}
-        className="rounded-2xl bg-white border border-[var(--bob-line)] p-6 space-y-3"
-      >
-        <h2 className="font-semibold text-lg">Fai parlare BOB</h2>
+      <form onSubmit={speak} className="bob-card p-6 space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">
+            Fai parlare BOB
+          </h2>
+          <p className="text-sm text-[var(--bob-muted)] mt-0.5">
+            Invia una frase da far pronunciare al robot.
+          </p>
+        </div>
         <div className="flex flex-col sm:flex-row gap-3">
           <input
-            className="flex-1 rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            className="bob-input flex-1"
             placeholder="Ciao, benvenuto."
             value={speakText}
             onChange={(e) => setSpeakText(e.target.value)}
           />
-          <button type="submit" className="bob-btn rounded-full px-5 py-2.5 font-medium">
+          <button
+            type="submit"
+            className="bob-btn px-5 py-2.5 text-sm shrink-0"
+          >
             Invia
           </button>
         </div>
-        {msg ? <p className="text-sm text-[var(--bob-teal)]">{msg}</p> : null}
+        {msg ? (
+          <p className="text-sm text-[var(--bob-teal)] font-medium">{msg}</p>
+        ) : null}
       </form>
 
       {modules.appointments ? (
-        <section className="rounded-2xl bg-white border border-[var(--bob-line)] p-6">
-          <h2 className="font-semibold text-lg">Persone in sala d&apos;attesa</h2>
+        <section className="bob-card p-6">
+          <h2 className="text-lg font-semibold tracking-tight">
+            Persone in sala d&apos;attesa
+          </h2>
           <p className="text-sm text-[var(--bob-muted)] mt-1">
             Ospiti con check-in oggi, in attesa.
           </p>
-          <ul className="mt-4 space-y-2">
+          <ul className="mt-5 space-y-2">
             {!status?.waiting?.length ? (
-              <li className="text-[var(--bob-muted)]">Nessuno in attesa.</li>
+              <li className="rounded-[var(--bob-radius)] bg-[var(--bob-cream)] px-4 py-6 text-center text-[var(--bob-muted)] text-sm">
+                Nessuno in attesa.
+              </li>
             ) : (
               status.waiting.map((p) => (
                 <li
                   key={p.id}
-                  className="rounded-xl border border-[var(--bob-line)] px-4 py-3 flex justify-between"
+                  className="rounded-[var(--bob-radius)] bg-[var(--bob-cream)] px-4 py-3.5 flex justify-between items-center gap-3"
                 >
-                  <span className="font-medium">{p.guestName}</span>
-                  <span className="text-sm text-[var(--bob-muted)]">
-                    appuntamento {format(new Date(p.startsAt), "HH:mm")}
+                  <span className="font-medium tracking-tight">
+                    {p.guestName}
+                  </span>
+                  <span className="text-sm text-[var(--bob-muted)] tabular-nums">
+                    {format(new Date(p.startsAt), "HH:mm")}
                   </span>
                 </li>
               ))

@@ -56,6 +56,7 @@ export function AdminShell({
   const [robotId, setRobotIdState] = useState("");
   const [unread, setUnread] = useState(0);
   const [modules, setModules] = useState<AdminModules>(DEFAULT_ADMIN_MODULES);
+  const [modulesOpen, setModulesOpen] = useState(false);
 
   const reloadRobots = useCallback(async () => {
     const res = await fetch("/api/admin/robots");
@@ -120,96 +121,189 @@ export function AdminShell({
     router.replace("/super");
   }
 
+  const moduleLinks = withRobotSelect ? enabledModuleLinks(modules) : [];
+
+  function isActive(href: string) {
+    if (href === "/admin" || href === "/super" || href === "/me") {
+      return pathname === href;
+    }
+    return pathname.startsWith(href);
+  }
+
+  const nav = (
+    <>
+      <div className="px-1 mb-6">
+        <p className="bob-eyebrow">BOB</p>
+        <p className="mt-1 text-[15px] font-semibold tracking-tight text-[var(--bob-ink)]">
+          {roleLabel}
+        </p>
+        <p className="mt-0.5 text-[13px] text-[var(--bob-muted)] truncate">
+          {operatorName}
+        </p>
+      </div>
+
+      {withRobotSelect && robots.length > 0 ? (
+        <div className="mb-5">
+          <label className="bob-label mb-1.5">Robot</label>
+          <select
+            className="bob-input text-sm"
+            value={robotId}
+            onChange={(e) => setRobotId(e.target.value)}
+          >
+            {robots.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.displayName}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+
+      <nav className="flex flex-col gap-0.5">
+        {links.map((l) => (
+          <Link
+            key={l.href}
+            href={l.href}
+            className="bob-nav-item"
+            data-active={isActive(l.href) ? "true" : "false"}
+          >
+            <span className="flex-1">{l.label}</span>
+            {l.badgeKey === "inbox" && unread > 0 ? (
+              <span className="inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-[var(--bob-danger)] text-white text-[11px] font-semibold px-1.5">
+                {unread}
+              </span>
+            ) : null}
+          </Link>
+        ))}
+
+        {moduleLinks.length > 0 ? (
+          <div className="mt-3 pt-3 border-t border-[var(--bob-line)]">
+            <button
+              type="button"
+              className="bob-nav-item w-full text-left"
+              onClick={() => setModulesOpen((v) => !v)}
+            >
+              <span className="flex-1">Moduli</span>
+              <span className="text-[var(--bob-muted)] text-xs">
+                {modulesOpen ? "−" : "+"}
+              </span>
+            </button>
+            {modulesOpen ||
+            moduleLinks.some((m) => pathname.startsWith(m.href)) ? (
+              <div className="mt-0.5 ml-2 flex flex-col gap-0.5 border-l border-[var(--bob-line)] pl-2">
+                {moduleLinks.map((m) => (
+                  <Link
+                    key={m.href}
+                    href={m.href}
+                    className="bob-nav-item"
+                    data-active={
+                      pathname.startsWith(m.href) ? "true" : "false"
+                    }
+                  >
+                    {m.label}
+                  </Link>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </nav>
+
+      <div className="mt-auto pt-6 flex flex-col gap-2">
+        {backToSuper ? (
+          <button
+            type="button"
+            onClick={leaveClientPanel}
+            className="bob-btn-secondary px-3 py-2.5 text-sm"
+          >
+            Torna a Super Admin
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={logout}
+          className="bob-btn-secondary px-3 py-2.5 text-sm"
+        >
+          Esci
+        </button>
+      </div>
+    </>
+  );
+
   return (
     <Ctx.Provider value={value}>
-      <div className="min-h-screen">
-        <header className="border-b border-[var(--bob-line)] bg-white">
-          <div className="mx-auto max-w-6xl px-4 py-4 flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-xs tracking-[0.18em] uppercase text-[var(--bob-navy)] font-semibold">
-                BOB · {roleLabel}
+      <div className="min-h-screen lg:flex">
+        {/* Desktop sidebar */}
+        <aside className="hidden lg:flex w-[248px] shrink-0 flex-col border-r border-[var(--bob-line)] bg-[var(--bob-surface)] px-4 py-6 sticky top-0 h-screen">
+          {nav}
+        </aside>
+
+        {/* Mobile top bar */}
+        <div className="lg:hidden border-b border-[var(--bob-line)] bg-[var(--bob-surface)]">
+          <div className="px-4 py-3 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="bob-eyebrow">BOB · {roleLabel}</p>
+              <p className="text-sm text-[var(--bob-muted)] truncate">
+                {operatorName}
               </p>
-              <p className="text-sm text-[var(--bob-muted)]">{operatorName}</p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {withRobotSelect && robots.length > 0 ? (
-                <select
-                  className="rounded-full border border-[var(--bob-line)] px-3 py-2 text-sm bg-[var(--bob-cream)]"
-                  value={robotId}
-                  onChange={(e) => setRobotId(e.target.value)}
-                >
-                  {robots.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.displayName}
-                    </option>
-                  ))}
-                </select>
-              ) : null}
-              <nav className="flex flex-wrap items-center gap-1">
-                {links.map((l) => {
-                  const active =
-                    l.href === "/admin"
-                      ? pathname === "/admin"
-                      : pathname.startsWith(l.href);
-                  return (
-                    <Link
-                      key={l.href}
-                      href={l.href}
-                      className={`px-3 py-2 rounded-full text-sm font-medium ${
-                        active ? "bob-btn" : "hover:bg-[var(--bob-cream)]"
-                      }`}
-                    >
-                      {l.label}
-                      {l.badgeKey === "inbox" && unread > 0 ? (
-                        <span className="ml-2 inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-red-600 text-white text-xs px-1">
-                          {unread}
-                        </span>
-                      ) : null}
-                    </Link>
-                  );
-                })}
-                {withRobotSelect ? (
-                  <div className="relative group">
-                    <span className="px-3 py-2 rounded-full text-sm font-medium hover:bg-[var(--bob-cream)] cursor-default inline-block">
-                      Moduli
-                    </span>
-                    <div className="absolute left-0 top-full z-20 hidden group-hover:block min-w-52 rounded-2xl border border-[var(--bob-line)] bg-white p-2 shadow-lg">
-                      {enabledModuleLinks(modules).map((m) => (
-                        <Link
-                          key={m.href}
-                          href={m.href}
-                          className={`block rounded-xl px-3 py-2 text-sm ${
-                            pathname.startsWith(m.href)
-                              ? "bg-[var(--bob-cream)] font-medium"
-                              : "hover:bg-[var(--bob-cream)]"
-                          }`}
-                        >
-                          {m.label}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-                {backToSuper ? (
-                  <button
-                    type="button"
-                    onClick={leaveClientPanel}
-                    className="px-3 py-2 rounded-full text-sm bg-[var(--bob-navy)] text-white"
-                  >
-                    Torna a Super Admin
-                  </button>
-                ) : null}
-                <button
-                  onClick={logout}
-                  className="ml-2 px-3 py-2 rounded-full text-sm border border-[var(--bob-line)]"
-                >
-                  Esci
-                </button>
-              </nav>
-            </div>
+            <button
+              type="button"
+              onClick={logout}
+              className="bob-btn-secondary px-3 py-1.5 text-sm shrink-0"
+            >
+              Esci
+            </button>
           </div>
-        </header>
-        <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+          <div className="px-3 pb-3 flex gap-1 overflow-x-auto">
+            {links.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className="bob-nav-item whitespace-nowrap shrink-0"
+                data-active={isActive(l.href) ? "true" : "false"}
+              >
+                {l.label}
+                {l.badgeKey === "inbox" && unread > 0 ? (
+                  <span className="ml-1 text-[11px] font-semibold text-[var(--bob-danger)]">
+                    {unread}
+                  </span>
+                ) : null}
+              </Link>
+            ))}
+            {moduleLinks.map((m) => (
+              <Link
+                key={m.href}
+                href={m.href}
+                className="bob-nav-item whitespace-nowrap shrink-0"
+                data-active={pathname.startsWith(m.href) ? "true" : "false"}
+              >
+                {m.label}
+              </Link>
+            ))}
+          </div>
+          {withRobotSelect && robots.length > 0 ? (
+            <div className="px-4 pb-3">
+              <select
+                className="bob-input text-sm"
+                value={robotId}
+                onChange={(e) => setRobotId(e.target.value)}
+              >
+                {robots.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.displayName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+        </div>
+
+        <main className="flex-1 min-w-0">
+          <div className="mx-auto max-w-5xl px-4 sm:px-6 py-8 lg:py-10">
+            {children}
+          </div>
+        </main>
       </div>
     </Ctx.Provider>
   );

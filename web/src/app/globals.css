@@ -1,28 +1,49 @@
 @import "tailwindcss";
 
 :root {
-  --bob-cream: #f5f3ef;
-  --bob-black: #181818;
+  /* Surfaces — soft, Apple-like light UI */
+  --bob-cream: #f5f4f1;
+  --bob-bg: #f5f4f1;
+  --bob-surface: #ffffff;
+  --bob-black: #1d1d1f;
+  --bob-ink: #1d1d1f;
   --bob-navy: #0d2c50;
-  --bob-teal: #087589;
-  --bob-line: #d8d4ce;
-  --bob-muted: #626262;
+  --bob-teal: #0a7a8c;
+  --bob-line: #e5e2dc;
+  --bob-line-strong: #d0ccc4;
+  --bob-muted: #6e6e73;
+  --bob-danger: #d70015;
+  --bob-radius: 12px;
+  --bob-radius-lg: 18px;
+  --bob-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.04);
   color-scheme: light;
 }
 
-/*
- * Custom rules must live in @layer base. Unlayered `body { color }` / `a { color: inherit }`
- * beat Tailwind utilities (text-white), so black pills stay black-on-black.
- */
+@theme inline {
+  --color-bob-cream: var(--bob-cream);
+  --color-bob-bg: var(--bob-bg);
+  --color-bob-surface: var(--bob-surface);
+  --color-bob-black: var(--bob-black);
+  --color-bob-navy: var(--bob-navy);
+  --color-bob-teal: var(--bob-teal);
+  --color-bob-line: var(--bob-line);
+  --color-bob-muted: var(--bob-muted);
+  --radius-bob: var(--bob-radius);
+  --radius-bob-lg: var(--bob-radius-lg);
+}
+
 @layer base {
   html {
     color-scheme: light;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    background: var(--bob-cream);
-    color: var(--bob-black);
+    background: var(--bob-bg);
+    color: var(--bob-ink);
     font-family: var(--font-geist-sans), system-ui, sans-serif;
+    letter-spacing: -0.011em;
   }
 
   a {
@@ -33,23 +54,166 @@
   button {
     cursor: pointer;
   }
+
+  ::selection {
+    background: color-mix(in srgb, var(--bob-navy) 18%, transparent);
+  }
+
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus,
+  button:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--bob-navy) 35%, transparent);
+    outline-offset: 2px;
+  }
 }
 
 @layer components {
   .bob-btn {
-    background-color: var(--bob-black);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    background-color: var(--bob-ink);
     color: #ffffff;
+    border-radius: var(--bob-radius);
+    font-weight: 550;
+    letter-spacing: -0.01em;
+    transition: background-color 0.15s ease, transform 0.12s ease, opacity 0.15s ease;
+  }
+
+  .bob-btn:hover {
+    background-color: color-mix(in srgb, var(--bob-ink) 88%, white);
+  }
+
+  .bob-btn:active {
+    transform: scale(0.98);
+  }
+
+  .bob-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .bob-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bob-surface);
+    color: var(--bob-ink);
+    border: 1px solid var(--bob-line-strong);
+    border-radius: var(--bob-radius);
+    font-weight: 500;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .bob-btn-secondary:hover {
+    background: var(--bob-cream);
   }
 
   .bob-link {
     color: var(--bob-navy);
     text-decoration: underline;
     text-underline-offset: 3px;
-    font-weight: 600;
+    text-decoration-thickness: 1px;
+    font-weight: 560;
+  }
+
+  .bob-link:hover {
+    opacity: 0.8;
   }
 
   .bob-dialog {
-    background-color: #ffffff;
-    color: var(--bob-black);
+    background-color: var(--bob-surface);
+    color: var(--bob-ink);
+  }
+
+  .bob-card {
+    background: var(--bob-surface);
+    border: 1px solid var(--bob-line);
+    border-radius: var(--bob-radius-lg);
+    box-shadow: var(--bob-shadow);
+  }
+
+  .bob-input {
+    width: 100%;
+    border: 1px solid var(--bob-line);
+    border-radius: var(--bob-radius);
+    background: var(--bob-cream);
+    padding: 0.7rem 0.9rem;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+  }
+
+  .bob-input:focus {
+    background: #fff;
+    border-color: color-mix(in srgb, var(--bob-navy) 40%, var(--bob-line));
+  }
+
+  .bob-label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 560;
+    color: var(--bob-muted);
+    letter-spacing: -0.01em;
+  }
+
+  .bob-eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--bob-navy);
+  }
+
+  .bob-page-title {
+    font-size: clamp(1.75rem, 2.5vw, 2.125rem);
+    font-weight: 650;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    color: var(--bob-ink);
+  }
+
+  .bob-page-sub {
+    margin-top: 0.35rem;
+    font-size: 0.9375rem;
+    color: var(--bob-muted);
+    letter-spacing: -0.01em;
+  }
+
+  .bob-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    border-radius: 10px;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--bob-muted);
+    transition: background-color 0.12s ease, color 0.12s ease;
+  }
+
+  .bob-nav-item:hover {
+    background: var(--bob-cream);
+    color: var(--bob-ink);
+  }
+
+  .bob-nav-item[data-active="true"] {
+    background: var(--bob-ink);
+    color: #fff;
+  }
+
+  .bob-status-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    flex-shrink: 0;
   }
 }

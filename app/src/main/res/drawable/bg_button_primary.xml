@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Primary: dark pill like site hover / strong CTA on light bg -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
     <solid android:color="@color/bob_black" />
-    <corners android:radius="56dp" />
+    <corners android:radius="14dp" />
 </shape>

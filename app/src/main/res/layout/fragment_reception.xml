@@ -4,90 +4,82 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bob_cream"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     tools:context=".ui.ReceptionFragment">
 
-    <!-- Idle: logo + attesa; gear in angolo -->
     <FrameLayout
         android:id="@+id/panel_idle"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clickable="true"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:focusable="true"
         android:foreground="?attr/selectableItemBackground">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:clipChildren="false"
+            android:clipToPadding="false"
             android:gravity="center"
             android:orientation="vertical"
             android:padding="@dimen/screen_padding">
 
-            <ImageView
-                android:layout_width="@dimen/logo_size"
-                android:layout_height="@dimen/logo_size"
-                android:background="@drawable/bg_logo_chip"
-                android:contentDescription="@string/app_name"
-                android:padding="6dp"
-                android:src="@drawable/logo_bob_mark" />
+            <com.buddybob.robot.ui.avatar.BobAvatarView
+                android:id="@+id/bob_avatar_idle"
+                android:layout_width="@dimen/avatar_size"
+                android:layout_height="@dimen/avatar_size"
+                android:clipChildren="false"
+                android:clipToPadding="false" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:letterSpacing="-0.03"
+                style="@style/BuddyTitle"
                 android:text="@string/reception_idle_title"
-                android:textColor="@color/bob_navy"
-                android:textSize="@dimen/text_title"
-                android:textStyle="bold" />
+                android:textColor="@color/bob_black" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:gravity="center"
-                android:text="@string/reception_idle_hint"
-                android:textColor="@color/bob_navy"
-                android:textSize="@dimen/text_body" />
+                style="@style/BuddySubtitle"
+                android:text="@string/reception_idle_hint" />
         </LinearLayout>
-
-        <ImageButton
-            android:id="@+id/btn_idle_settings"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:layout_gravity="top|end"
-            android:layout_margin="16dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/robot_settings_gear"
-            android:padding="12dp"
-            android:scaleType="centerInside"
-            android:src="@drawable/ic_settings_gear" />
     </FrameLayout>
 
     <LinearLayout
         android:id="@+id/panel_greeting"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:gravity="center"
         android:orientation="vertical"
         android:padding="@dimen/screen_padding"
         android:visibility="gone"
         tools:visibility="gone">
 
-        <ImageView
-            android:id="@+id/image_face"
-            android:layout_width="@dimen/face_size"
-            android:layout_height="@dimen/face_size"
-            android:contentDescription="@string/reception_face"
-            android:src="@drawable/face_smile" />
+        <com.buddybob.robot.ui.avatar.BobAvatarView
+            android:id="@+id/bob_avatar_greeting"
+            android:layout_width="@dimen/avatar_size"
+            android:layout_height="@dimen/avatar_size"
+            android:clipChildren="false"
+            android:clipToPadding="false" />
 
         <TextView
             android:id="@+id/text_greeting"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
+            android:layout_marginTop="24dp"
+            android:gravity="center"
             android:letterSpacing="-0.03"
             android:text="@string/reception_welcome"
-            android:textColor="@color/bob_navy"
+            android:textColor="@color/bob_black"
             android:textSize="@dimen/greeting_text"
             android:textStyle="bold" />
     </LinearLayout>
@@ -103,13 +95,20 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/bob_navy"
+            android:background="@color/bob_white"
+            android:elevation="2dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingStart="@dimen/screen_padding"
-            android:paddingTop="14dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="14dp">
+            android:paddingTop="16dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="16dp">
+
+            <com.buddybob.robot.ui.avatar.BobAvatarView
+                android:id="@+id/bob_avatar_menu"
+                android:layout_width="@dimen/avatar_size_compact"
+                android:layout_height="@dimen/avatar_size_compact"
+                android:layout_marginEnd="14dp" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -121,31 +120,24 @@
                     android:id="@+id/text_menu_title"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:letterSpacing="-0.03"
+                    style="@style/BuddyTitle"
                     android:text="@string/reception_menu_title"
-                    android:textColor="@color/bob_white"
-                    android:textSize="@dimen/text_title"
-                    android:textStyle="bold" />
+                    android:textSize="22sp" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="2dp"
+                    style="@style/BuddySubtitle"
                     android:text="@string/reception_menu_hint"
-                    android:textColor="@color/bob_white"
-                    android:textSize="@dimen/text_body" />
+                    android:textSize="@dimen/text_small" />
             </LinearLayout>
-
-            <ImageButton
-                android:id="@+id/btn_menu_settings"
-                android:layout_width="52dp"
-                android:layout_height="52dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/robot_settings_gear"
-                android:padding="12dp"
-                android:scaleType="centerInside"
-                android:src="@drawable/ic_settings_gear_white" />
         </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/bob_line" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recycler_menu"
@@ -155,8 +147,36 @@
             android:clipToPadding="false"
             android:overScrollMode="never"
             android:paddingStart="@dimen/screen_padding"
-            android:paddingTop="14dp"
+            android:paddingTop="18dp"
             android:paddingEnd="@dimen/screen_padding"
-            android:paddingBottom="16dp" />
+            android:paddingBottom="20dp" />
     </LinearLayout>
+
+    <!-- Impostazioni: in alto a sinistra -->
+    <ImageButton
+        android:id="@+id/btn_settings"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_gravity="top|start"
+        android:layout_margin="16dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/robot_settings_gear"
+        android:elevation="4dp"
+        android:padding="8dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_settings_gear" />
+
+    <!-- Microfono: in alto a destra -->
+    <ImageButton
+        android:id="@+id/btn_voice_mic"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="16dp"
+        android:background="@drawable/bg_mic_idle"
+        android:contentDescription="@string/voice_mic_button"
+        android:elevation="6dp"
+        android:padding="16dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_mic_white" />
 </FrameLayout>

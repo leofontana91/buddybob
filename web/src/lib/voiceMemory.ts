@@ -15,7 +15,7 @@ type Session = {
 };
 
 const TTL_MS = 5 * 60_000;
-const MAX_TURNS = 12; // 12 user+assistant pairs → 24 messages
+const MAX_TURNS = 4; // 4 scambi → meno contesto, AI più veloce
 const store = new Map<string, Session>();
 
 function key(robotId: string, sessionKey: string) {

@@ -57,14 +57,14 @@ export default function InboxPage() {
     <div>
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Inbox</h1>
+          <h1 className="bob-page-title">Inbox</h1>
           <p className="text-[var(--bob-muted)] mt-1">
             Arrivi ospiti e richieste operatore
           </p>
         </div>
         <button
           onClick={markAll}
-          className="rounded-full border border-[var(--bob-line)] px-4 py-2 text-sm"
+          className="bob-btn-secondary px-4 py-2 text-sm"
         >
           Segna tutto letto
         </button>
@@ -96,7 +96,7 @@ export default function InboxPage() {
               </div>
               {!a.readAt ? (
                 <button
-                  className="self-start rounded-full bg-[var(--bob-black)] text-white px-3 py-1.5 text-sm"
+                  className="self-start bob-btn px-3 py-1.5 text-sm"
                   onClick={() => markOne(a.id)}
                 >
                   Letto

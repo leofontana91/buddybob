@@ -251,12 +251,10 @@ class CommandPoller {
         when (phase) {
             "depart" -> act.showPlaceDisplay(cfg?.displayOnDepart, cfg?.mediaOnDepart)
             "moving" -> {
-                val label = cfg?.labelOrName().orEmpty()
-                act.showMovingPlaceholder(
-                    destinationLabel = label.ifBlank { "…" },
-                    text = cfg?.displayWhileMoving,
-                    media = cfg?.mediaWhileMoving
-                )
+                val label = cfg?.labelOrName().orEmpty().ifBlank { "…" }
+                val caption = cfg?.displayWhileMoving?.trim()?.takeIf { it.isNotEmpty() }
+                    ?: act.getString(com.buddybob.robot.R.string.voice_moving_placeholder, label)
+                act.showPlaceDisplay(caption, cfg?.mediaWhileMoving, logoIfNoMedia = true)
             }
             "arrive" -> act.showPlaceDisplay(cfg?.displayOnArrive, cfg?.mediaOnArrive)
         }

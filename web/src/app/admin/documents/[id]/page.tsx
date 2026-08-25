@@ -112,13 +112,13 @@ export default function DocumentEditorPage() {
 
       <form
         onSubmit={save}
-        className="rounded-2xl bg-white border border-[var(--bob-line)] p-6 space-y-4"
+        className="bob-card p-6 space-y-4"
       >
         <label className="text-sm block">
           Nome (come compare sul robot)
           <input
             required
-            className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            className="mt-1 w-full bob-input"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -136,7 +136,7 @@ export default function DocumentEditorPage() {
           <h2 className="font-semibold">Domande</h2>
           <button
             type="button"
-            className="text-sm rounded-full border border-[var(--bob-line)] px-3 py-1.5"
+            className="text-sm bob-btn-secondary px-3 py-1.5"
             onClick={addField}
           >
             Aggiungi domanda
@@ -157,7 +157,7 @@ export default function DocumentEditorPage() {
                 <label className="text-sm md:col-span-6">
                   Testo domanda
                   <input
-                    className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+                    className="mt-1 w-full bob-input"
                     value={field.label}
                     onChange={(e) =>
                       setFields((prev) =>
@@ -171,7 +171,7 @@ export default function DocumentEditorPage() {
                 <label className="text-sm md:col-span-3">
                   Tipo
                   <select
-                    className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+                    className="mt-1 w-full bob-input"
                     value={field.type}
                     onChange={(e) =>
                       setFields((prev) =>
@@ -219,12 +219,12 @@ export default function DocumentEditorPage() {
         </ul>
 
         <div className="flex flex-wrap gap-2">
-          <button type="submit" className="bob-btn rounded-full px-5 py-2.5 font-medium">
+          <button type="submit" className="bob-btn px-5 py-2.5 font-medium">
             Salva modulo
           </button>
           <button
             type="button"
-            className="rounded-full border border-[var(--bob-line)] px-5 py-2.5"
+            className="bob-btn-secondary px-5 py-2.5"
             onClick={remove}
           >
             Elimina
@@ -241,7 +241,7 @@ export default function DocumentEditorPage() {
             submissions.map((s) => (
               <li
                 key={s.id}
-                className="rounded-2xl bg-white border border-[var(--bob-line)] px-4 py-3"
+                className="bob-card px-4 py-3"
               >
                 <p className="text-sm text-[var(--bob-muted)]">
                   {format(new Date(s.createdAt), "dd/MM/yyyy HH:mm")}

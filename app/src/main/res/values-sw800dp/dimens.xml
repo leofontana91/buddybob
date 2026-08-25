@@ -13,6 +13,9 @@
     <dimen name="menu_item_height">88dp</dimen>
     <dimen name="menu_item_text">22sp</dimen>
     <dimen name="face_size">280dp</dimen>
+    <dimen name="avatar_size">480dp</dimen>
+    <dimen name="avatar_size_compact">200dp</dimen>
+    <dimen name="avatar_stage_pad">36dp</dimen>
     <dimen name="logo_size">64dp</dimen>
     <dimen name="input_height">60dp</dimen>
     <dimen name="greeting_text">44sp</dimen>

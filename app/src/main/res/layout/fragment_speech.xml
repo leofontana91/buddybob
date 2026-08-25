@@ -1,58 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Conversazione: Bob grande al centro, microfono e indietro -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bob_cream"
-    android:orientation="vertical"
-    android:padding="20dp"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     tools:context=".ui.SpeechFragment">
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/speech"
-        android:textColor="@color/bob_black"
-        android:textSize="24sp"
-        android:textStyle="bold" />
-
-    <EditText
-        android:id="@+id/edit_tts"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:background="@color/bob_panel"
-        android:hint="@string/default_tts"
-        android:padding="14dp"
-        android:textColor="@color/bob_black"
-        android:textColorHint="@color/bob_muted" />
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:layout_height="match_parent"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="@dimen/screen_padding">
 
-        <Button android:id="@+id/btn_speak" style="@style/BuddyButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:text="Parla" />
-        <Button android:id="@+id/btn_stop_tts" style="@style/BuddyButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:text="Stop TTS" />
-        <Button android:id="@+id/btn_asr_on" style="@style/BuddyButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:text="ASR ON" />
-        <Button android:id="@+id/btn_asr_off" style="@style/BuddyButton" android:layout_width="0dp" android:layout_height="56dp" android:layout_weight="1" android:text="ASR OFF" />
+        <com.buddybob.robot.ui.avatar.BobAvatarView
+            android:id="@+id/bob_avatar_speech"
+            android:layout_width="@dimen/avatar_size"
+            android:layout_height="@dimen/avatar_size"
+            android:clipChildren="false"
+            android:clipToPadding="false" />
+
+        <TextView
+            android:id="@+id/text_speech_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            style="@style/BuddyTitle"
+            android:text="@string/speech_talk_title"
+            android:textColor="@color/bob_black" />
+
+        <TextView
+            android:id="@+id/text_speech_hint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            style="@style/BuddySubtitle"
+            android:text="@string/speech_talk_hint" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/text_feedback"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginTop="16dp"
-        android:layout_weight="1"
-        android:background="@color/bob_panel"
-        android:padding="12dp"
-        android:textColor="@color/bob_muted"
-        tools:text="TTS complete" />
-
     <Button
-        android:id="@+id/btn_back"
+        android:id="@+id/btn_speech_back"
         style="@style/BuddyButton"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_width="wrap_content"
+        android:layout_height="@dimen/btn_height_secondary"
+        android:layout_gravity="bottom|start"
+        android:layout_margin="20dp"
+        android:minWidth="120dp"
         android:text="@string/back" />
-</LinearLayout>
+
+    <ImageButton
+        android:id="@+id/btn_voice_mic"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="20dp"
+        android:background="@drawable/bg_mic_idle"
+        android:contentDescription="@string/voice_mic_button"
+        android:elevation="6dp"
+        android:padding="18dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_mic_white" />
+</FrameLayout>

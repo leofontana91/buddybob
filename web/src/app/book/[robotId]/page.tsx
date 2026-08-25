@@ -57,7 +57,7 @@ export default function PublicBookPage() {
   if (done) {
     return (
       <main className="min-h-screen flex items-center justify-center px-4">
-        <div className="max-w-md w-full rounded-2xl bg-white border border-[var(--bob-line)] p-8 text-center">
+        <div className="max-w-md w-full bob-card p-8 text-center">
           <h1 className="text-2xl font-bold">Appuntamento fissato</h1>
           <p className="mt-2 text-[var(--bob-muted)]">
             Grazie {guestName}. Ti aspettiamo!
@@ -80,13 +80,13 @@ export default function PublicBookPage() {
 
         <form
           onSubmit={onSubmit}
-          className="mt-8 rounded-2xl bg-white border border-[var(--bob-line)] p-6 space-y-5"
+          className="mt-8 bob-card p-6 space-y-5"
         >
           <label className="block text-sm font-medium">
             Il tuo nome
             <input
               required
-              className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2.5 bg-[var(--bob-cream)]"
+              className="mt-1 w-full bob-input"
               value={guestName}
               onChange={(e) => setGuestName(e.target.value)}
             />
@@ -132,7 +132,7 @@ export default function PublicBookPage() {
           <button
             type="submit"
             disabled={!selected || !guestName}
-            className="w-full rounded-full bg-[var(--bob-black)] text-white py-3 font-medium disabled:opacity-50"
+            className="w-full bob-btn py-3 font-medium disabled:opacity-50"
           >
             Conferma
           </button>

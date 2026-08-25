@@ -7,6 +7,7 @@ import { resolveVoiceWithAi } from "@/lib/voiceAi";
 import {
   openaiConfigured,
   resolveVoiceRules,
+  ensureItalianQuestionMark,
   type VoicePlace,
 } from "@/lib/voiceIntent";
 import {
@@ -67,17 +68,34 @@ export async function POST(req: Request, ctx: Ctx) {
   }
 
   const history = getVoiceHistory(id, sessionKey);
-  const fromAi = await resolveVoiceWithAi({
-    text,
-    places,
-    modules,
-    instructions: settings?.voiceInstructions,
-    history,
-  });
+  // Comandi chiari o orario/data: regole locali subito, senza attendere OpenAI.
+  const rulesHit = resolveVoiceRules({ text, places, modules });
+  const n = text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^a-z0-9\s]/gi, " ");
+  const clockOrDate =
+    /\b(che ore sono|che ora|orario|che giorno|che data)\b/.test(n) ||
+    n.trim() === "ora";
+  const fastPath =
+    rulesHit != null &&
+    (rulesHit.actions.length > 0 || clockOrDate);
+
+  const fromAi = fastPath
+    ? null
+    : await resolveVoiceWithAi({
+        text,
+        places,
+        modules,
+        instructions: settings?.voiceInstructions,
+        history,
+      });
 
   const result =
+    (fastPath ? rulesHit : null) ??
     fromAi ??
-    resolveVoiceRules({ text, places, modules }) ?? {
+    rulesHit ?? {
       speak:
         "Non ho capito. Puoi dire ad esempio «apri appuntamenti» o «accompagnami in reception».",
       actions: [],
@@ -87,10 +105,11 @@ export async function POST(req: Request, ctx: Ctx) {
   if (fromAi?.newTopic) {
     clearVoiceHistory(id, sessionKey);
   }
-  appendVoiceTurn(id, sessionKey, text, result.speak);
+  const speak = ensureItalianQuestionMark(result.speak);
+  appendVoiceTurn(id, sessionKey, text, speak);
 
   return NextResponse.json({
-    speak: result.speak,
+    speak,
     actions: result.actions,
     source: result.source,
     aiConfigured: openaiConfigured(),

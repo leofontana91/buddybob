@@ -98,14 +98,14 @@ export default function SpeechModulePage() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Parla con me</h1>
-        <p className="text-[var(--bob-muted)] mt-1">
+        <h1 className="bob-page-title">Parla con me</h1>
+        <p className="bob-page-sub">
           Comandi vocali e istruzioni per l&apos;AI: sinonimi, cosa può dire e
           cosa deve evitare.
         </p>
       </div>
 
-      <section className="rounded-2xl bg-white border border-[var(--bob-line)] p-5 space-y-2">
+      <section className="bob-card p-5 space-y-2">
         <h2 className="font-semibold">Intelligenza</h2>
         {aiConfigured ? (
           <p className="text-sm">
@@ -123,7 +123,7 @@ export default function SpeechModulePage() {
 
       <form
         onSubmit={saveInstructions}
-        className="rounded-2xl bg-white border border-[var(--bob-line)] p-5 space-y-3"
+        className="bob-card p-5 space-y-3"
       >
         <h2 className="font-semibold">Istruzioni per l&apos;AI</h2>
         <p className="text-sm text-[var(--bob-muted)]">
@@ -133,7 +133,7 @@ export default function SpeechModulePage() {
         </p>
         <textarea
           rows={8}
-          className="w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)] text-sm"
+          className="w-full bob-input text-sm"
           placeholder={EXAMPLE_INSTRUCTIONS}
           value={instructions}
           onChange={(e) => {
@@ -152,7 +152,7 @@ export default function SpeechModulePage() {
           Inserisci esempio
         </button>
         <div className="flex items-center gap-3">
-          <button type="submit" className="bob-btn rounded-full px-5 py-2 font-medium">
+          <button type="submit" className="bob-btn px-5 py-2 font-medium">
             Salva istruzioni
           </button>
           {saved ? (
@@ -163,7 +163,7 @@ export default function SpeechModulePage() {
 
       <form
         onSubmit={onPreview}
-        className="rounded-2xl bg-white border border-[var(--bob-line)] p-5 space-y-3"
+        className="bob-card p-5 space-y-3"
       >
         <h2 className="font-semibold">Prova una frase</h2>
         <p className="text-sm text-[var(--bob-muted)]">
@@ -171,7 +171,7 @@ export default function SpeechModulePage() {
           «Nuova conversazione» per azzerare.
         </p>
         <input
-          className="w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+          className="w-full bob-input"
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Vorrei un appuntamento"
@@ -188,7 +188,7 @@ export default function SpeechModulePage() {
             <button
               key={ex}
               type="button"
-              className="rounded-full border border-[var(--bob-line)] px-3 py-1"
+              className="bob-btn-secondary px-3 py-1"
               onClick={() => setText(ex)}
             >
               {ex}
@@ -196,12 +196,12 @@ export default function SpeechModulePage() {
           ))}
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="submit" className="bob-btn rounded-full px-5 py-2 font-medium">
+          <button type="submit" className="bob-btn px-5 py-2 font-medium">
             Interpreta
           </button>
           <button
             type="button"
-            className="rounded-full border border-[var(--bob-line)] px-5 py-2 font-medium"
+            className="bob-btn-secondary px-5 py-2 font-medium"
             onClick={async () => {
               if (!robotId) return;
               await fetch("/api/admin/voice", {

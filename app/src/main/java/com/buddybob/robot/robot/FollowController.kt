@@ -64,10 +64,10 @@ class FollowController {
         }
     }
 
-    fun getBestFace(maxDistanceMeters: Double = 3.0): Person? {
+    fun getBestFace(maxDistanceMeters: Double = 4.5): Person? {
         return try {
             val faces = PersonApi.getInstance().getCompleteFaceList() ?: emptyList()
-            PersonUtils.getBestFace(faces, maxDistanceMeters, 60.0)
+            PersonUtils.getBestFace(faces, maxDistanceMeters, 80.0)
         } catch (e: Exception) {
             Log.w(TAG, "getBestFace failed: ${e.message}")
             null
@@ -85,12 +85,12 @@ class FollowController {
 
     /** Persone nel cono frontale entro [maxDistanceMeters]. */
     fun getPersonsInFront(
-        maxDistanceMeters: Double = 3.0,
-        maxAbsAngleDeg: Double = 45.0
+        maxDistanceMeters: Double = 4.5,
+        maxAbsAngleDeg: Double = 70.0
     ): List<Person> {
         return getVisiblePersons(maxDistanceMeters).filter { p ->
             val d = p.distance
-            d > 0.2 && d <= maxDistanceMeters &&
+            d > 0.15 && d <= maxDistanceMeters &&
                 kotlin.math.abs(p.angle.toDouble()) <= maxAbsAngleDeg
         }.sortedBy { kotlin.math.abs(it.angle) }
     }

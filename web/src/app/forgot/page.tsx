@@ -28,51 +28,56 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4">
+    <main className="min-h-screen relative flex items-center justify-center px-4 overflow-hidden">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 60% at 20% 10%, rgba(13,44,80,0.08), transparent 55%), linear-gradient(180deg, #faf9f7 0%, var(--bob-cream) 100%)",
+        }}
+      />
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-md rounded-2xl bg-white border border-[var(--bob-line)] p-8 shadow-sm"
+        className="bob-card relative w-full max-w-[400px] p-8 sm:p-10"
       >
-        <p className="text-xs tracking-[0.2em] uppercase text-[var(--bob-navy)] font-semibold">
-          BOB Robotics
-        </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight">
-          Password dimenticata
-        </h1>
-        <p className="mt-1 text-[var(--bob-muted)] text-sm">
-          Inserisci l&apos;email dell&apos;account. Ti invieremo un link per
-          reimpostare la password.
+        <p className="bob-eyebrow">BOB Robotics</p>
+        <h1 className="bob-page-title mt-3">Password dimenticata</h1>
+        <p className="bob-page-sub">
+          Ti invieremo un link per reimpostare la password.
         </p>
 
         {done ? (
-          <p className="mt-8 text-sm text-[var(--bob-navy)]">
+          <p className="mt-8 text-sm text-[var(--bob-navy)] leading-relaxed">
             Se l&apos;email è registrata, riceverai un messaggio con le
             istruzioni. Controlla anche lo spam.
           </p>
         ) : (
           <>
-            <label className="block mt-8 text-sm font-medium">Email</label>
+            <label className="bob-label mt-8">Email</label>
             <input
-              className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2.5 bg-[var(--bob-cream)]"
+              className="bob-input mt-1.5"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               type="email"
               autoComplete="email"
               required
             />
-            {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
+            {error ? (
+              <p className="mt-3 text-sm text-[var(--bob-danger)]">{error}</p>
+            ) : null}
             <button
               type="submit"
               disabled={loading}
-              className="mt-6 w-full rounded-full bg-[var(--bob-black)] text-white py-3 font-medium disabled:opacity-60"
+              className="bob-btn mt-7 w-full py-3 text-[15px]"
             >
               {loading ? "Invio…" : "Invia link"}
             </button>
           </>
         )}
 
-        <p className="mt-6 text-sm">
-          <Link href="/login" className="underline text-[var(--bob-navy)]">
+        <p className="mt-6 text-center text-sm">
+          <Link href="/login" className="bob-link">
             Torna al login
           </Link>
         </p>

@@ -72,6 +72,7 @@ model Robot {
   androidReleases  RobotAndroidRelease[]
   savedPhrases     SavedPhrase[]
   tasks            RobotTask[]
+  voiceMemos       VoiceMemo[]
 }
 
 model AdminRobot {
@@ -273,6 +274,26 @@ model AccessVisit {
 
   @@index([robotId, enteredAt])
   @@index([robotId, exitedAt])
+}
+
+/// Memo vocali registrati dal robot (audio + trascrizione).
+model VoiceMemo {
+  id           String   @id @default(cuid())
+  robotId      String
+  robot        Robot    @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  /// URL pubblico audio (Supabase Storage)
+  audioUrl     String
+  storagePath  String
+  contentType  String   @default("audio/mp4")
+  durationMs   Int?
+  /// Trascrizione Whisper / testo
+  transcript   String   @default("")
+  /// pending | ready | failed
+  status       String   @default("pending")
+  errorMessage String?
+  createdAt    DateTime @default(now())
+
+  @@index([robotId, createdAt])
 }
 
 /// Android OTA-like releases uploaded by SUPER_ADMIN (robot-specific).

@@ -10,6 +10,9 @@ import com.buddybob.robot.BuddybobApp
 class SpeechController {
 
     var onTtsState: ((String) -> Unit)? = null
+    var onSpeakingChanged: ((Boolean) -> Unit)? = null
+    /** Testo in riproduzione TTS (per UI «Ho detto»). */
+    var onSpeakText: ((String) -> Unit)? = null
 
     @Volatile
     var listeningDesired: Boolean = false
@@ -32,6 +35,8 @@ class SpeechController {
     private fun applyRecognition() {
         val api = skill() ?: return
         val on = listeningDesired && !speaking
+        // Chiude il “hint” di sistema sul wake (spesso dice «Hi» / saluto OS).
+        runCatching { api.setWakeupHintClosed(true) }
         api.setRecognizable(on)
         if (on) api.setRecognizeMode(true)
     }
@@ -43,7 +48,7 @@ class SpeechController {
     fun setMicAngle(centerDeg: Float, rangeDeg: Float = LOCKED_RANGE_DEG) {
         val api = skill() ?: return
         val center = centerDeg.coerceIn(-90f, 90f)
-        val range = rangeDeg.coerceIn(20f, 120f)
+        val range = rangeDeg.coerceIn(20f, 160f)
         runCatching {
             api.setAngleCenterRange(center, range)
             Log.d(TAG, "mic angle center=$center range=$range")
@@ -74,15 +79,18 @@ class SpeechController {
             return
         }
         val trimmed = text.take(1000)
+        onSpeakText?.invoke(trimmed)
         var finished = false
         fun finishOnce() {
             if (finished) return
             finished = true
             speaking = false
             applyRecognition()
+            onSpeakingChanged?.invoke(false)
             onComplete?.invoke()
         }
         speaking = true
+        onSpeakingChanged?.invoke(true)
         applyRecognition()
         api.playText(TTSEntity(sid, trimmed), object : TextListener() {
             override fun onStart() {
@@ -109,8 +117,10 @@ class SpeechController {
 
     fun stop() {
         skill()?.stopTTS()
+        val wasSpeaking = speaking
         speaking = false
         applyRecognition()
+        if (wasSpeaking) onSpeakingChanged?.invoke(false)
         onTtsState?.invoke("TTS stopped")
     }
 
@@ -129,9 +139,9 @@ class SpeechController {
 
     companion object {
         private const val TAG = "SpeechController"
-        /** Cono frontale per sentire «Bob» da chi è davanti. */
+        /** Cono frontale stretto: meno rumore laterale/dietro. */
         const val FRONT_RANGE_DEG = 70f
-        /** Cono più stretto dopo il lock sulla persona. */
+        /** Dopo lock: cono stretto sulla persona davanti. */
         const val LOCKED_RANGE_DEG = 45f
     }
 }

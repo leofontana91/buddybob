@@ -356,7 +356,7 @@ export default function SuperPage() {
   return (
     <div className="space-y-10">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Super Admin</h1>
+        <h1 className="bob-page-title">Super Admin</h1>
         <p className="text-[var(--bob-muted)] mt-1">
           Crea aziende (admin), collega robot per seriale, abilita moduli
         </p>
@@ -375,21 +375,21 @@ export default function SuperPage() {
 
       <form
         onSubmit={createAdmin}
-        className="rounded-2xl bg-white border border-[var(--bob-line)] p-6 space-y-4"
+        className="bob-card p-6 space-y-4"
       >
         <h2 className="font-semibold text-lg">Nuova azienda (Admin)</h2>
         <div className="grid md:grid-cols-2 gap-3">
           <input
             required
             placeholder="Nome azienda"
-            className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            className="bob-input"
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
           />
           <input
             required
             placeholder="Nome persona di riferimento"
-            className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            className="bob-input"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -397,21 +397,21 @@ export default function SuperPage() {
             required
             type="email"
             placeholder="Email (riceverà attivazione)"
-            className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            className="bob-input"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
           <input
             required
             placeholder="Città"
-            className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            className="bob-input"
             value={city}
             onChange={(e) => setCity(e.target.value)}
           />
           <input
             required
             placeholder="Indirizzo"
-            className="md:col-span-2 rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            className="md:col-span-2 bob-input"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
           />
@@ -422,13 +422,13 @@ export default function SuperPage() {
           <input
             required
             placeholder="Numero di serie"
-            className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            className="bob-input"
             value={robotSerial}
             onChange={(e) => setRobotSerial(e.target.value)}
           />
           <input
             placeholder="Nome robot (opzionale)"
-            className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            className="bob-input"
             value={robotDisplayName}
             onChange={(e) => setRobotDisplayName(e.target.value)}
           />
@@ -447,7 +447,7 @@ export default function SuperPage() {
           {(Object.keys(MODULE_LABELS) as (keyof AdminModules)[]).map((key) => (
             <label
               key={key}
-              className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm cursor-pointer ${
+              className={`flex items-center gap-2 border px-3 py-1.5 text-sm cursor-pointer ${
                 modules[key]
                   ? "border-[var(--bob-black)] bg-[var(--bob-cream)]"
                   : "border-[var(--bob-line)] opacity-60"
@@ -465,7 +465,7 @@ export default function SuperPage() {
 
         <button
           type="submit"
-          className="bob-btn rounded-full px-6 py-2.5 font-medium"
+          className="bob-btn px-6 py-2.5 font-medium"
         >
           Crea admin + robot e invia attivazione
         </button>
@@ -477,7 +477,7 @@ export default function SuperPage() {
           {admins.map((a) => (
             <li
               key={a.id}
-              className="rounded-2xl bg-white border border-[var(--bob-line)] px-4 py-4 space-y-3"
+              className="bob-card px-4 py-4 space-y-3"
             >
               <div className="flex flex-wrap justify-between gap-2">
                 <div>
@@ -496,7 +496,7 @@ export default function SuperPage() {
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    className="text-xs rounded-full bg-[var(--bob-black)] text-white px-3 py-1.5"
+                    className="text-xs bob-btn px-3 py-1.5"
                     onClick={() => openClientPanel(a.id)}
                   >
                     Entra nel pannello
@@ -504,7 +504,7 @@ export default function SuperPage() {
                   {a.status !== "active" ? (
                     <button
                       type="button"
-                      className="text-xs rounded-full border border-[var(--bob-line)] px-3 py-1.5"
+                      className="text-xs bob-btn-secondary px-3 py-1.5"
                       onClick={() =>
                         post({ action: "resend_activation", adminId: a.id })
                       }
@@ -514,7 +514,7 @@ export default function SuperPage() {
                   ) : null}
                   <button
                     type="button"
-                    className="text-xs rounded-full border border-[var(--bob-line)] px-3 py-1.5"
+                    className="text-xs bob-btn-secondary px-3 py-1.5"
                     onClick={() =>
                       post({
                         action: "set_admin_status",
@@ -539,7 +539,7 @@ export default function SuperPage() {
                     (key) => (
                       <label
                         key={key}
-                        className="flex items-center gap-1.5 text-xs rounded-full border border-[var(--bob-line)] px-2.5 py-1"
+                        className="flex items-center gap-1.5 text-xs bob-btn-secondary px-2.5 py-1"
                       >
                         <input
                           type="checkbox"
@@ -573,7 +573,7 @@ export default function SuperPage() {
                         </span>
                         <button
                           type="button"
-                          className="text-xs rounded-full border px-2 py-0.5"
+                          className="text-xs border px-2 py-0.5"
                           onClick={() =>
                             post({
                               action: "set_robot_enabled",
@@ -586,7 +586,7 @@ export default function SuperPage() {
                         </button>
                         <button
                           type="button"
-                          className="bob-btn text-xs rounded-full px-2 py-0.5"
+                          className="bob-btn text-xs px-2 py-0.5"
                           onClick={() => openPairing(r.id)}
                         >
                           Prepara associazione
@@ -607,7 +607,7 @@ export default function SuperPage() {
           {robots.map((r) => (
             <li
               key={r.id}
-              className="rounded-2xl bg-white border border-[var(--bob-line)] px-4 py-3"
+              className="bob-card px-4 py-3"
             >
               <p className="font-semibold">
                 {r.displayName}{" "}
@@ -626,7 +626,7 @@ export default function SuperPage() {
               </p>
               <button
                 type="button"
-                className="bob-btn mt-2 text-sm rounded-full px-4 py-1.5"
+                className="bob-btn mt-2 text-sm px-4 py-1.5"
                 onClick={() => openPairing(r.id)}
               >
                 Prepara associazione
@@ -645,13 +645,13 @@ export default function SuperPage() {
 
         <form
           onSubmit={uploadAndroidUpdate}
-          className="rounded-2xl bg-white border border-[var(--bob-line)] p-6 space-y-4 mt-4"
+          className="bob-card p-6 space-y-4 mt-4"
         >
           <div className="grid md:grid-cols-2 gap-3">
             <select
               value={androidUpdateRobotId}
               onChange={(e) => setAndroidUpdateRobotId(e.target.value)}
-              className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+              className="bob-input"
             >
               <option value="">Globale (tutti i robot)</option>
               {robots.map((r) => (
@@ -664,14 +664,14 @@ export default function SuperPage() {
             <input
               required
               placeholder="versionName (es. 1.1.1)"
-              className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+              className="bob-input"
               value={androidUpdateVersionName}
               onChange={(e) => setAndroidUpdateVersionName(e.target.value)}
             />
 
             <textarea
               placeholder="Note (opzionale)"
-              className="md:col-span-2 rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+              className="md:col-span-2 bob-input"
               value={androidUpdateNotes}
               onChange={(e) => setAndroidUpdateNotes(e.target.value)}
               rows={3}
@@ -697,7 +697,7 @@ export default function SuperPage() {
 
           <button
             type="submit"
-            className="bob-btn rounded-full px-6 py-2.5 font-medium"
+            className="bob-btn px-6 py-2.5 font-medium"
             disabled={androidUpdateUploading}
           >
             {androidUpdateUploading ? "Caricamento…" : "Carica APK"}
@@ -730,7 +730,7 @@ export default function SuperPage() {
               </div>
               <button
                 type="button"
-                className="text-sm rounded-full border border-[var(--bob-line)] px-3 py-1"
+                className="text-sm bob-btn-secondary px-3 py-1"
                 onClick={() => setPairOpen(false)}
               >
                 Chiudi

@@ -57,7 +57,7 @@ export default function DocumentsPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold tracking-tight">Documenti</h1>
+      <h1 className="bob-page-title">Documenti</h1>
       <p className="text-[var(--bob-muted)] mt-1">
         Crea moduli con domande. Compariranno sul robot in Documenti, da far
         compilare al cliente.
@@ -65,19 +65,19 @@ export default function DocumentsPage() {
 
       <form
         onSubmit={create}
-        className="mt-8 flex flex-wrap gap-3 items-end rounded-2xl bg-white border border-[var(--bob-line)] p-4"
+        className="mt-8 flex flex-wrap gap-3 items-end bob-card p-4"
       >
         <label className="text-sm grow min-w-[220px]">
           Nome modulo
           <input
             required
-            className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            className="mt-1 w-full bob-input"
             placeholder="es. Registrazione ospite"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
         </label>
-        <button type="submit" className="bob-btn rounded-full px-5 py-2.5 font-medium">
+        <button type="submit" className="bob-btn px-5 py-2.5 font-medium">
           Crea modulo
         </button>
         {msg ? <p className="text-sm text-red-600 w-full">{msg}</p> : null}
@@ -90,7 +90,7 @@ export default function DocumentsPage() {
           forms.map((f) => (
             <li
               key={f.id}
-              className="rounded-2xl bg-white border border-[var(--bob-line)] px-4 py-3 flex flex-wrap items-center justify-between gap-3"
+              className="bob-card px-4 py-3 flex flex-wrap items-center justify-between gap-3"
             >
               <div>
                 <p className="font-semibold text-lg">{f.name}</p>
@@ -101,7 +101,7 @@ export default function DocumentsPage() {
               </div>
               <Link
                 href={`/admin/documents/${f.id}`}
-                className="bob-btn rounded-full px-4 py-2 text-sm"
+                className="bob-btn px-4 py-2 text-sm"
               >
                 Modifica
               </Link>

@@ -25,7 +25,7 @@ export default function MePage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold tracking-tight">I miei appuntamenti</h1>
+      <h1 className="bob-page-title">I miei appuntamenti</h1>
       <p className="text-[var(--bob-muted)] mt-1">
         Solo gli appuntamenti collegati al tuo account
       </p>
@@ -37,7 +37,7 @@ export default function MePage() {
           items.map((a) => (
             <li
               key={a.id}
-              className="rounded-2xl bg-white border border-[var(--bob-line)] px-4 py-3"
+              className="bob-card px-4 py-3"
             >
               <p className="font-semibold text-lg">
                 {format(new Date(a.startsAt), "dd/MM/yyyy HH:mm")}

@@ -20,7 +20,7 @@ export default function GenericModulePage() {
 
   return (
     <div className="max-w-xl space-y-4">
-      <h1 className="text-3xl font-bold tracking-tight">{label}</h1>
+      <h1 className="bob-page-title">{label}</h1>
       <p className="text-[var(--bob-muted)]">
         Questo modulo è attivo sull&apos;account. Le azioni quotidiane stanno in{" "}
         <strong>Azioni robot</strong>; qui arriveranno impostazioni dedicate

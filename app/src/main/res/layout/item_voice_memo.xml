@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/bg_panel_round"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <TextView
+        android:id="@+id/text_memo_item_meta"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        style="@style/BuddySectionLabel"
+        android:textColor="@color/bob_teal"
+        tools:text="25 ago · 17:20 · 12s" />
+
+    <TextView
+        android:id="@+id/text_memo_item_body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:ellipsize="end"
+        android:maxLines="3"
+        android:textColor="@color/bob_black"
+        android:textSize="15sp"
+        tools:text="Trascrizione del memo…" />
+</LinearLayout>

@@ -60,14 +60,10 @@ function ResetForm() {
     <main className="min-h-screen flex items-center justify-center px-4">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-md rounded-2xl bg-white border border-[var(--bob-line)] p-8 shadow-sm"
+        className="w-full max-w-md bob-card p-8 shadow-sm"
       >
-        <p className="text-xs tracking-[0.2em] uppercase text-[var(--bob-navy)] font-semibold">
-          BOB Robotics
-        </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight">
-          Nuova password
-        </h1>
+        <p className="bob-eyebrow">BOB Robotics</p>
+        <h1 className="bob-page-title mt-3">Nuova password</h1>
         {info ? (
           <p className="mt-2 text-sm text-[var(--bob-muted)]">{info.email}</p>
         ) : null}
@@ -78,7 +74,7 @@ function ResetForm() {
           required
           minLength={6}
           autoComplete="new-password"
-          className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2.5 bg-[var(--bob-cream)]"
+          className="mt-1 w-full bob-input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
@@ -91,7 +87,7 @@ function ResetForm() {
           required
           minLength={6}
           autoComplete="new-password"
-          className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2.5 bg-[var(--bob-cream)]"
+          className="mt-1 w-full bob-input"
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
         />
@@ -101,7 +97,7 @@ function ResetForm() {
         <button
           type="submit"
           disabled={loading || !info}
-          className="mt-6 w-full rounded-full bg-[var(--bob-black)] text-white py-3 font-medium disabled:opacity-50"
+          className="bob-btn mt-7 w-full py-3 font-medium disabled:opacity-50"
         >
           {loading ? "Salvataggio…" : "Salva password"}
         </button>

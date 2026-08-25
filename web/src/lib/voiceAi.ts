@@ -29,14 +29,19 @@ export async function resolveVoiceWithAi(args: {
   const model = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
   const key = process.env.OPENAI_API_KEY!.trim();
   const custom = (args.instructions ?? "").trim().slice(0, 4000);
-  const history = args.history ?? [];
+  // Solo ultimi 3 scambi → meno token, risposta più veloce
+  const history = (args.history ?? []).slice(-6);
+  const nowIt = formatNowItaly();
 
-  const system = `Sei BOB, receptionist robot (italiano). Conversi con l'ospite e puoi anche eseguire comandi.
+  const system = `Sei BOB, receptionist robot (italiano). Aiuti con i moduli del robot E chiacchiere con l'ospite.
 
 Rispondi SOLO con JSON valido (niente markdown):
 {"speak":"risposta da far dire al robot","actions":[...],"newTopic":false}
 
-Azioni ammesse (solo se serve ora):
+Ora e data correnti (Europa/Roma): ${nowIt}
+Usa questi valori per «che ore sono», «che giorno è», ecc. Non inventare un altro orario.
+
+Azioni ammesse (solo se serve un comando robot ora; altrimenti actions: []):
 - {"type":"open","module":"<id>"}  id tra: ${catalog.modules.map((m) => m.id).join(", ") || "(nessuno)"}
 - {"type":"goto","placeName":"<name>","after":"stay"}  solo se goToEnabled e placeName è nella lista places (campo name tecnico)
 - {"type":"stop"}
@@ -45,12 +50,19 @@ Azioni ammesse (solo se serve ora):
 
 Regole fisse:
 - Usa la cronologia: riferimenti tipo «là», «quello», «ci puoi accompagnare» riguardano il contesto precedente.
-- Puoi fare un discorso breve (domande di chiarimento, conferma), non solo comandi secchi.
-- newTopic=true SOLO se l'ospite cambia argomento in modo netto (es. da appuntamenti al meteo, o «parliamo d'altro»). Altrimenti false.
+- Se l'ospite vuole registrare un audio/memo («registra questo audio», «registra un memo»): speak «Apro i memo vocali. Tocca Inizia a registrare quando sei pronto.» e actions [{"type":"open","module":"voiceMemos"}]. Non avviare la registrazione da solo.
+- Se l'ospite dice di avere un appuntamento (oggi / check-in / «sono in agenda»): speak chiedendo chi è (es. «Chi sei? Tocca il tuo nome sulla lista.») e actions [{"type":"open","module":"appointmentsToday"}]. Non aprire solo «appointments» in quel caso.
+- Per «apri appuntamenti» generico senza dire di averne uno: module «appointments».
+- Conversazione libera OK: ora, data, saluti, battute, indovinelli, storie brevi, curiosità, spiegazioni semplici, chiacchiere. Per queste: rispondi in speak e actions [].
+- Storie/racconti: max ~80 parole, tono adatto a un receptionist cordiale (niente contenuti inappropriati).
+- Altre risposte: max ~40 parole, cordiali.
+- Se speak è una domanda, termina SEMPRE con «?».
+- newTopic=true SOLO se l'ospite cambia argomento in modo netto. Altrimenti false.
 - Non inventare punti mappa: solo quelli in places.
-- Non inventare fatti (meteo, notizie, orari non in istruzioni): se non puoi, dillo in speak e actions [].
+- Non inventare fatti aziendali (orari di apertura, servizi, prezzi) se non sono nelle istruzioni del cliente: in quel caso dillo e actions [].
+- Meteo/notizie in tempo reale: non hai dati live → dillo brevemente, non inventare.
 - Non azioni fuori dai moduli elencati.
-- speak in italiano, cordiale, max 35 parole.
+- speak in italiano. Mai salutare in inglese (niente «Hi», «Hello», «Hey»).
 ${
   custom
     ? `
@@ -93,7 +105,8 @@ ${custom}
       },
       body: JSON.stringify({
         model,
-        temperature: 0.35,
+        temperature: 0.45,
+        max_tokens: 450,
         response_format: { type: "json_object" },
         messages,
       }),
@@ -110,9 +123,38 @@ ${custom}
     const parsed = parseVoiceAiJson(content);
     if (!parsed) return null;
     const sanitized = sanitizeVoiceResult(parsed, args.places, args.modules);
-    return { ...sanitized, newTopic: parsed.newTopic === true };
+    return {
+      ...sanitized,
+      speak: sanitized.speak,
+      newTopic: parsed.newTopic === true,
+    };
   } catch (e) {
     console.error("[voice-ai]", e);
     return null;
+  }
+}
+
+/** Es. «martedì 25 agosto 2026, ore 17:05» per l'Italia. */
+function formatNowItaly(d = new Date()): string {
+  try {
+    const weekday = new Intl.DateTimeFormat("it-IT", {
+      timeZone: "Europe/Rome",
+      weekday: "long",
+    }).format(d);
+    const date = new Intl.DateTimeFormat("it-IT", {
+      timeZone: "Europe/Rome",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(d);
+    const time = new Intl.DateTimeFormat("it-IT", {
+      timeZone: "Europe/Rome",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(d);
+    return `${weekday} ${date}, ore ${time}`;
+  } catch {
+    return d.toISOString();
   }
 }

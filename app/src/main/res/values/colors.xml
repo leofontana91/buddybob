@@ -1,17 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- bobrobotics.com — light site palette -->
+    <!-- Soft Apple-like light palette, Buddybob brand -->
     <color name="bob_white">#FFFFFF</color>
-    <color name="bob_cream">#F5F3EF</color>
-    <color name="bob_cream_soft">#EBE7E0</color>
-    <color name="bob_black">#181818</color>
+    <color name="bob_cream">#F5F4F1</color>
+    <color name="bob_cream_soft">#EBE9E4</color>
+    <color name="bob_black">#1D1D1F</color>
     <color name="bob_navy">#0D2C50</color>
-    <color name="bob_teal">#087589</color>
+    <color name="bob_teal">#0A7A8C</color>
+    <color name="bob_mic_listening">#1F9D55</color>
     <color name="bob_cyan">#00B4FF</color>
-    <color name="bob_muted">#626262</color>
-    <color name="bob_line">#D8D4CE</color>
-    <color name="bob_danger">#CF2E2E</color>
+    <color name="bob_muted">#6E6E73</color>
+    <color name="bob_line">#E5E2DC</color>
+    <color name="bob_line_strong">#D0CCC4</color>
+    <color name="bob_danger">#D70015</color>
     <color name="bob_panel">#FFFFFF</color>
+    <color name="bob_overlay">#F2FFFFFF</color>
 
     <color name="bg_deep">@color/bob_cream</color>
     <color name="bg_panel">@color/bob_white</color>
@@ -20,6 +23,6 @@
     <color name="text_primary">@color/bob_black</color>
     <color name="text_muted">@color/bob_muted</color>
     <color name="button_fill">@color/bob_white</color>
-    <color name="button_stroke">@color/bob_black</color>
+    <color name="button_stroke">@color/bob_line_strong</color>
     <color name="danger">@color/bob_danger</color>
 </resources>

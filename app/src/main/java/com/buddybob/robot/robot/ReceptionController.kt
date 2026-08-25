@@ -136,6 +136,12 @@ class ReceptionController(
 
         if (present) {
             absentSinceMs = 0L
+            // lo sguardo dell'avatar segue la persona più centrata davanti al robot
+            nearby.minByOrNull { abs(it.angle.toDouble()) }?.let { p ->
+                BuddybobApp.instance.robot.avatar.onPersonAt(
+                    p.angle.toFloat(), p.distance.toFloat()
+                )
+            }
             if (!guestPresent) {
                 guestPresent = true
                 presentSinceMs = now
@@ -151,6 +157,7 @@ class ReceptionController(
         if (guestPresent) {
             guestPresent = false
             absentSinceMs = now
+            BuddybobApp.instance.robot.avatar.onPersonLost()
         }
         presentSinceMs = 0L
         if (absentSinceMs == 0L) return
@@ -169,8 +176,8 @@ class ReceptionController(
 
     private fun inFront(person: Person, maxDistance: Double): Boolean {
         val distance = person.distance.toDouble()
-        if (distance <= 0.2 || distance > maxDistance) return false
-        if (abs(person.angle.toDouble()) > 45.0) return false
+        if (distance <= 0.15 || distance > maxDistance) return false
+        if (abs(person.angle.toDouble()) > 70.0) return false
         return true
     }
 

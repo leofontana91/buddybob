@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Barra di sistema custom: ora, wifi, batteria (icone nitide) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/bar_system_status"
+    android:layout_width="match_parent"
+    android:layout_height="32dp"
+    android:background="@color/bob_black"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="16dp"
+    android:paddingEnd="14dp">
+
+    <TextView
+        android:id="@+id/text_status_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.02"
+        android:textColor="@color/bob_white"
+        android:textSize="13sp"
+        tools:text="17:14" />
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <ImageView
+        android:id="@+id/img_status_wifi"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:contentDescription="@null"
+        android:src="@drawable/ic_status_wifi_3" />
+
+    <com.buddybob.robot.ui.widget.BatteryIconView
+        android:id="@+id/img_status_battery"
+        android:layout_width="28dp"
+        android:layout_height="14dp"
+        android:layout_marginStart="14dp" />
+
+    <TextView
+        android:id="@+id/text_status_battery"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="6dp"
+        android:fontFamily="sans-serif-medium"
+        android:textColor="@color/bob_white"
+        android:textSize="12sp"
+        tools:text="86%" />
+</LinearLayout>

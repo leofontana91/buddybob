@@ -95,7 +95,7 @@ export default function AgendaPage() {
     <div>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Appuntamenti</h1>
+          <h1 className="bob-page-title">Appuntamenti</h1>
           <p className="text-[var(--bob-muted)] mt-1">
             Agenda e sala d&apos;attesa per questo robot
           </p>
@@ -113,12 +113,12 @@ export default function AgendaPage() {
 
       <form
         onSubmit={create}
-        className="mt-8 flex flex-wrap gap-3 items-end rounded-2xl bg-white border border-[var(--bob-line)] p-4"
+        className="mt-8 flex flex-wrap gap-3 items-end bob-card p-4"
       >
         <label className="text-sm grow min-w-[180px]">
           Utente piattaforma
           <select
-            className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            className="mt-1 w-full bob-input"
             value={userId}
             onChange={(e) => setUserId(e.target.value)}
           >
@@ -135,7 +135,7 @@ export default function AgendaPage() {
             Nome ospite
             <input
               required={!userId}
-              className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+              className="mt-1 w-full bob-input"
               value={guestName}
               onChange={(e) => setGuestName(e.target.value)}
             />
@@ -146,14 +146,14 @@ export default function AgendaPage() {
           <input
             type="time"
             required
-            className="mt-1 block rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            className="mt-1 block bob-input"
             value={time}
             onChange={(e) => setTime(e.target.value)}
           />
         </label>
         <button
           type="submit"
-          className="rounded-full bg-[var(--bob-black)] text-white px-5 py-2.5 font-medium"
+          className="bob-btn px-5 py-2.5 font-medium"
         >
           Aggiungi
         </button>
@@ -171,7 +171,7 @@ export default function AgendaPage() {
           items.map((a) => (
             <li
               key={a.id}
-              className="rounded-2xl bg-white border border-[var(--bob-line)] px-4 py-3 flex flex-wrap items-center justify-between gap-3"
+              className="bob-card px-4 py-3 flex flex-wrap items-center justify-between gap-3"
             >
               <div>
                 <p className="font-semibold text-lg">{a.guestName}</p>
@@ -184,13 +184,13 @@ export default function AgendaPage() {
                 {a.status === "scheduled" ? (
                   <>
                     <button
-                      className="rounded-full border border-[var(--bob-line)] px-3 py-1.5 text-sm"
+                      className="bob-btn-secondary px-3 py-1.5 text-sm"
                       onClick={() => setStatus(a.id, "checked_in")}
                     >
                       Check-in
                     </button>
                     <button
-                      className="rounded-full border border-[var(--bob-line)] px-3 py-1.5 text-sm"
+                      className="bob-btn-secondary px-3 py-1.5 text-sm"
                       onClick={() => setStatus(a.id, "cancelled")}
                     >
                       Annulla
@@ -244,13 +244,13 @@ function BookingSettings({ robotId }: { robotId: string }) {
   return (
     <form
       onSubmit={save}
-      className="mt-10 rounded-2xl bg-white border border-[var(--bob-line)] p-6 space-y-4 max-w-xl"
+      className="mt-10 bob-card p-6 space-y-4 max-w-xl"
     >
       <h2 className="font-semibold text-lg">Impostazioni prenotazione</h2>
       <fieldset>
         <legend className="text-sm font-medium">Come si fissa l&apos;appuntamento</legend>
         <div className="mt-2 flex flex-wrap gap-3">
-          <label className="flex items-center gap-2 rounded-full border border-[var(--bob-line)] px-4 py-2">
+          <label className="flex items-center gap-2 bob-btn-secondary px-4 py-2">
             <input
               type="radio"
               checked={settings.bookingMode === "qr"}
@@ -258,7 +258,7 @@ function BookingSettings({ robotId }: { robotId: string }) {
             />
             QR verso pagina web
           </label>
-          <label className="flex items-center gap-2 rounded-full border border-[var(--bob-line)] px-4 py-2">
+          <label className="flex items-center gap-2 bob-btn-secondary px-4 py-2">
             <input
               type="radio"
               checked={settings.bookingMode === "in_app"}
@@ -273,7 +273,7 @@ function BookingSettings({ robotId }: { robotId: string }) {
       <label className="block text-sm font-medium">
         URL prenotazione
         <input
-          className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+          className="mt-1 w-full bob-input"
           value={settings.bookingUrl}
           onChange={(e) =>
             setSettings({ ...settings, bookingUrl: e.target.value })
@@ -283,7 +283,7 @@ function BookingSettings({ robotId }: { robotId: string }) {
       <label className="block text-sm font-medium">
         Frase dopo check-in
         <input
-          className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+          className="mt-1 w-full bob-input"
           value={settings.checkInSpeak}
           onChange={(e) =>
             setSettings({ ...settings, checkInSpeak: e.target.value })
@@ -295,7 +295,7 @@ function BookingSettings({ robotId }: { robotId: string }) {
           Inizio
           <input
             type="time"
-            className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            className="mt-1 w-full bob-input"
             value={settings.dayStart}
             onChange={(e) =>
               setSettings({ ...settings, dayStart: e.target.value })
@@ -306,7 +306,7 @@ function BookingSettings({ robotId }: { robotId: string }) {
           Fine
           <input
             type="time"
-            className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            className="mt-1 w-full bob-input"
             value={settings.dayEnd}
             onChange={(e) =>
               setSettings({ ...settings, dayEnd: e.target.value })
@@ -319,7 +319,7 @@ function BookingSettings({ robotId }: { robotId: string }) {
             type="number"
             min={5}
             max={120}
-            className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            className="mt-1 w-full bob-input"
             value={settings.slotMinutes}
             onChange={(e) =>
               setSettings({
@@ -330,7 +330,7 @@ function BookingSettings({ robotId }: { robotId: string }) {
           />
         </label>
       </div>
-      <button type="submit" className="bob-btn rounded-full px-6 py-2.5 font-medium">
+      <button type="submit" className="bob-btn px-6 py-2.5 font-medium">
         Salva impostazioni
       </button>
       {saved ? <p className="text-sm text-[var(--bob-teal)]">Salvato.</p> : null}

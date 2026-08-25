@@ -13,6 +13,17 @@
     <dimen name="menu_item_height">72dp</dimen>
     <dimen name="menu_item_text">17sp</dimen>
     <dimen name="face_size">200dp</dimen>
+    <dimen name="avatar_size">360dp</dimen>
+    <dimen name="avatar_size_compact">160dp</dimen>
+    <dimen name="avatar_stage_pad">28dp</dimen>
+    <!-- Overlay insets for Bob avatar (FrameLayout does not support % margins) -->
+    <dimen name="avatar_shadow_margin_h">36dp</dimen>
+    <dimen name="avatar_screen_inset_h">52dp</dimen>
+    <dimen name="avatar_screen_inset_top">28dp</dimen>
+    <dimen name="avatar_screen_inset_bottom">118dp</dimen>
+    <dimen name="avatar_ring_inset_h">42dp</dimen>
+    <dimen name="avatar_ring_inset_top">18dp</dimen>
+    <dimen name="avatar_ring_inset_bottom">108dp</dimen>
     <dimen name="logo_size">48dp</dimen>
     <dimen name="input_height">52dp</dimen>
     <dimen name="greeting_text">36sp</dimen>

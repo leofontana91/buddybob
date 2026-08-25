@@ -158,8 +158,8 @@ export default function PlacesPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Vai a…</h1>
-        <p className="text-[var(--bob-muted)] mt-1">
+        <h1 className="bob-page-title">Vai a…</h1>
+        <p className="bob-page-sub">
           Punti mappa, frasi e cosa mostra il monitor in partenza e all&apos;arrivo.
         </p>
       </div>
@@ -196,7 +196,7 @@ export default function PlacesPage() {
             value={shared}
             onChange={setShared}
           />
-          <button type="submit" className="bob-btn rounded-full px-5 py-2.5 font-medium">
+          <button type="submit" className="bob-btn px-5 py-2.5 font-medium">
             Salva per tutti i punti
           </button>
         </form>
@@ -211,7 +211,7 @@ export default function PlacesPage() {
               value={newGroup}
               onChange={(e) => setNewGroup(e.target.value)}
             />
-            <button type="submit" className="bob-btn rounded-full px-4 py-2 font-medium">
+            <button type="submit" className="bob-btn px-4 py-2 font-medium">
               Crea gruppo
             </button>
           </form>
@@ -224,7 +224,7 @@ export default function PlacesPage() {
             groups.map((g) => (
               <div
                 key={g.id}
-                className="rounded-2xl bg-white border border-[var(--bob-line)] p-5 space-y-4"
+                className="bob-card p-5 space-y-4"
               >
                 <div className="flex flex-wrap items-center gap-2 justify-between">
                   <input
@@ -290,7 +290,7 @@ export default function PlacesPage() {
                 />
                 <button
                   type="button"
-                  className="bob-btn rounded-full px-5 py-2 font-medium"
+                  className="bob-btn px-5 py-2 font-medium"
                   onClick={() => saveGroup(g)}
                 >
                   Salva gruppo
@@ -311,7 +311,7 @@ export default function PlacesPage() {
           places.map((p) => (
             <div
               key={p.id}
-              className="rounded-2xl bg-white border border-[var(--bob-line)] p-5"
+              className="bob-card p-5"
             >
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -337,7 +337,7 @@ export default function PlacesPage() {
                     <label className="text-sm block">
                       Etichetta
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+                        className="mt-1 w-full bob-input"
                         value={p.label ?? ""}
                         placeholder={p.name}
                         onChange={(e) =>
@@ -350,7 +350,7 @@ export default function PlacesPage() {
                       <input
                         type="number"
                         min={0}
-                        className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+                        className="mt-1 w-full bob-input"
                         value={p.waitSeconds}
                         onChange={(e) =>
                           updatePlace(p.id, {
@@ -376,7 +376,7 @@ export default function PlacesPage() {
                   )}
                   <button
                     type="button"
-                    className="bob-btn rounded-full px-5 py-2 font-medium"
+                    className="bob-btn px-5 py-2 font-medium"
                     disabled={loading}
                     onClick={async () => {
                       setLoading(true);

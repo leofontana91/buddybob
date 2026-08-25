@@ -133,8 +133,8 @@ export default function ActionsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Azioni robot</h1>
-        <p className="text-[var(--bob-muted)] mt-1">
+        <h1 className="bob-page-title">Azioni robot</h1>
+        <p className="bob-page-sub">
           Muovi BOB, fagli dire una frase, oppure lancia una task.
         </p>
       </div>
@@ -143,14 +143,14 @@ export default function ActionsPage() {
 
       <form
         onSubmit={goTo}
-        className="rounded-2xl bg-white border border-[var(--bob-line)] p-6 space-y-3"
+        className="bob-card p-6 space-y-3"
       >
         <h2 className="font-semibold text-lg">Dove deve andare</h2>
         <label className="text-sm block">
           Punto
           <select
             required
-            className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            className="mt-1 w-full bob-input"
             value={placeName}
             onChange={(e) => setPlaceName(e.target.value)}
           >
@@ -163,7 +163,7 @@ export default function ActionsPage() {
           </select>
         </label>
         <div className="flex flex-wrap gap-3">
-          <label className="flex items-center gap-2 rounded-full border border-[var(--bob-line)] px-4 py-2 text-sm">
+          <label className="flex items-center gap-2 bob-btn-secondary px-4 py-2 text-sm">
             <input
               type="radio"
               checked={after === "stay"}
@@ -171,7 +171,7 @@ export default function ActionsPage() {
             />
             Resta al punto
           </label>
-          <label className="flex items-center gap-2 rounded-full border border-[var(--bob-line)] px-4 py-2 text-sm">
+          <label className="flex items-center gap-2 bob-btn-secondary px-4 py-2 text-sm">
             <input
               type="radio"
               checked={after === "return"}
@@ -187,19 +187,19 @@ export default function ActionsPage() {
               type="number"
               min={0}
               max={600}
-              className="mt-1 w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+              className="mt-1 w-full bob-input"
               value={returnAfterSec}
               onChange={(e) => setReturnAfterSec(Number(e.target.value))}
             />
           </label>
         ) : null}
         <div className="flex flex-wrap gap-2">
-          <button type="submit" className="bob-btn rounded-full px-5 py-2.5 font-medium">
+          <button type="submit" className="bob-btn px-5 py-2.5 font-medium">
             Invia
           </button>
           <button
             type="button"
-            className="rounded-full border border-[var(--bob-line)] px-5 py-2.5"
+            className="bob-btn-secondary px-5 py-2.5"
             onClick={() => send({ type: "stop" })}
           >
             Ferma
@@ -209,7 +209,7 @@ export default function ActionsPage() {
 
       <form
         onSubmit={speak}
-        className="rounded-2xl bg-white border border-[var(--bob-line)] p-6 space-y-3"
+        className="bob-card p-6 space-y-3"
       >
         <h2 className="font-semibold text-lg">Fai parlare BOB</h2>
         <div className="flex flex-wrap gap-2">
@@ -217,7 +217,7 @@ export default function ActionsPage() {
             <button
               key={p.id}
               type="button"
-              className="rounded-full border border-[var(--bob-line)] px-3 py-1.5 text-sm"
+              className="bob-btn-secondary px-3 py-1.5 text-sm"
               onClick={() => setSpeakText(p.text)}
             >
               {p.text}
@@ -227,26 +227,26 @@ export default function ActionsPage() {
         <textarea
           required
           rows={3}
-          className="w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+          className="w-full bob-input"
           placeholder="Ciao, benvenuto in ufficio."
           value={speakText}
           onChange={(e) => setSpeakText(e.target.value)}
         />
         <div className="flex flex-wrap gap-2">
-          <button type="submit" className="bob-btn rounded-full px-5 py-2.5 font-medium">
+          <button type="submit" className="bob-btn px-5 py-2.5 font-medium">
             Fai parlare BOB
           </button>
         </div>
         <div className="flex gap-2 pt-2">
           <input
-            className="flex-1 rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            className="flex-1 bob-input"
             placeholder="Salva una frase per riusarla"
             value={newPhrase}
             onChange={(e) => setNewPhrase(e.target.value)}
           />
           <button
             type="button"
-            className="rounded-full border border-[var(--bob-line)] px-4 py-2"
+            className="bob-btn-secondary px-4 py-2"
             onClick={(e) => {
               e.preventDefault();
               savePhrase(e as unknown as FormEvent);
@@ -257,7 +257,7 @@ export default function ActionsPage() {
         </div>
       </form>
 
-      <section className="rounded-2xl bg-white border border-[var(--bob-line)] p-6 space-y-4">
+      <section className="bob-card p-6 space-y-4">
         <h2 className="font-semibold text-lg">Task</h2>
         <p className="text-sm text-[var(--bob-muted)]">
           Una sequenza di 2–4 azioni: parla, mostra un pulsante sul monitor,
@@ -266,7 +266,7 @@ export default function ActionsPage() {
         <form onSubmit={saveTask} className="space-y-3">
           <input
             required
-            className="w-full rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+            className="w-full bob-input"
             placeholder="Nome task, es. Accompagna in sala"
             value={taskName}
             onChange={(e) => setTaskName(e.target.value)}
@@ -277,7 +277,7 @@ export default function ActionsPage() {
               className="rounded-xl border border-[var(--bob-line)] p-3 grid md:grid-cols-3 gap-2"
             >
               <select
-                className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+                className="bob-input"
                 value={step.type}
                 onChange={(e) => {
                   const type = e.target.value as TaskStep["type"];
@@ -303,7 +303,7 @@ export default function ActionsPage() {
               </select>
               {step.type === "speak" ? (
                 <input
-                  className="md:col-span-2 rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+                  className="md:col-span-2 bob-input"
                   placeholder="Testo da dire"
                   value={step.text}
                   onChange={(e) => {
@@ -316,7 +316,7 @@ export default function ActionsPage() {
               {step.type === "button" ? (
                 <>
                   <input
-                    className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+                    className="bob-input"
                     placeholder="Testo pulsante"
                     value={step.label}
                     onChange={(e) => {
@@ -326,7 +326,7 @@ export default function ActionsPage() {
                     }}
                   />
                   <input
-                    className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+                    className="bob-input"
                     placeholder="Cosa dice quando premuto"
                     value={step.speakOnPress ?? ""}
                     onChange={(e) => {
@@ -339,7 +339,7 @@ export default function ActionsPage() {
               ) : null}
               {step.type === "goto" ? (
                 <select
-                  className="md:col-span-2 rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+                  className="md:col-span-2 bob-input"
                   value={step.placeName}
                   onChange={(e) => {
                     const next = [...taskSteps];
@@ -359,7 +359,7 @@ export default function ActionsPage() {
                 <input
                   type="number"
                   min={1}
-                  className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+                  className="bob-input"
                   value={step.seconds}
                   onChange={(e) => {
                     const next = [...taskSteps];
@@ -373,12 +373,12 @@ export default function ActionsPage() {
           <div className="flex gap-2">
             <button
               type="button"
-              className="rounded-full border border-[var(--bob-line)] px-4 py-2 text-sm"
+              className="bob-btn-secondary px-4 py-2 text-sm"
               onClick={() => setTaskSteps([...taskSteps, emptyStep()])}
             >
               Aggiungi passo
             </button>
-            <button type="submit" className="bob-btn rounded-full px-5 py-2 font-medium">
+            <button type="submit" className="bob-btn px-5 py-2 font-medium">
               Salva task
             </button>
           </div>
@@ -399,14 +399,14 @@ export default function ActionsPage() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  className="bob-btn rounded-full px-4 py-1.5 text-sm"
+                  className="bob-btn px-4 py-1.5 text-sm"
                   onClick={() => send({ type: "task", taskId: t.id })}
                 >
                   Avvia
                 </button>
                 <button
                   type="button"
-                  className="rounded-full border border-[var(--bob-line)] px-3 py-1.5 text-sm"
+                  className="bob-btn-secondary px-3 py-1.5 text-sm"
                   onClick={async () => {
                     await fetch(`/api/admin/tasks?id=${t.id}`, {
                       method: "DELETE",
@@ -431,7 +431,7 @@ export default function ActionsPage() {
             commands.map((c) => (
               <li
                 key={c.id}
-                className="rounded-2xl bg-white border border-[var(--bob-line)] px-4 py-3 text-sm flex justify-between gap-3"
+                className="bob-card px-4 py-3 text-sm flex justify-between gap-3"
               >
                 <span>
                   <strong>{labelType(c.type)}</strong>

@@ -3,6 +3,7 @@ import { MODULE_LABELS } from "./modules";
 
 export type VoiceModuleId =
   | "appointments"
+  | "appointmentsToday"
   | "documents"
   | "goTo"
   | "talkToMe"
@@ -76,7 +77,16 @@ const OPEN_MODULES: {
   {
     id: "voiceMemos",
     flag: "voiceMemos",
-    phrases: ["memo vocali", "memo", "messaggio vocale"],
+    phrases: [
+      "memo vocali",
+      "memo",
+      "messaggio vocale",
+      "registra questo audio",
+      "registra un audio",
+      "registra un memo",
+      "registra memo",
+      "inizia a registrare",
+    ],
   },
   {
     id: "accessControl",
@@ -153,6 +163,18 @@ export function resolveVoiceRules(args: {
   const n = normalizeUtterance(args.text);
   if (n.length < 2) return null;
 
+  const timeAsk =
+    /\b(che ore sono|che ora e|che ora|dimmi l ora|dimmi lora|orario|che giorno e|che giorno|che data)\b/.test(
+      n
+    ) || n === "ora" || n === "orario";
+  if (timeAsk) {
+    return {
+      speak: speakNowItaly(n.includes("giorno") || n.includes("data")),
+      actions: [],
+      source: "rules",
+    };
+  }
+
   if (
     /\b(ferma|stop|basta|fermati|arresta)\b/.test(n) ||
     n === "stop" ||
@@ -173,6 +195,40 @@ export function resolveVoiceRules(args: {
       actions: [{ type: "menu" }],
       source: "rules",
     };
+  }
+
+  // «Ho un appuntamento» → lista di oggi + chiede chi sei
+  if (args.modules.appointments) {
+    const hasAppt =
+      /\b(ho un appuntamento|ho appuntamento|sono in agenda|sono qui per un appuntamento|check in|checkin)\b/.test(
+        n
+      ) ||
+      (/\bappuntamento\b/.test(n) &&
+        /\b(oggi|adesso|ora|mio|mia)\b/.test(n));
+    if (hasAppt) {
+      return {
+        speak: "Perfetto. Chi sei? Tocca il tuo nome sulla lista.",
+        actions: [{ type: "open", module: "appointmentsToday" }],
+        source: "rules",
+      };
+    }
+  }
+
+  // «Registra questo audio» → apre memo e aspetta il tap su Inizia
+  if (args.modules.voiceMemos) {
+    const wantRecord =
+      /\b(registra (questo )?audio|registra un audio|registra (un )?memo|registrami|inizia a registrare|voglio registrare)\b/.test(
+        n
+      ) ||
+      (/\bregistr/.test(n) && /\b(audio|memo|messaggio)\b/.test(n));
+    if (wantRecord) {
+      return {
+        speak:
+          "Apro i memo vocali. Tocca Inizia a registrare quando sei pronto.",
+        actions: [{ type: "open", module: "voiceMemos" }],
+        source: "rules",
+      };
+    }
   }
 
   // Apri moduli / chiama operatore
@@ -247,6 +303,12 @@ export function voiceCatalog(args: {
     id: m.id,
     label: MODULE_LABELS[m.flag],
   }));
+  if (args.modules.appointments) {
+    modules.push({
+      id: "appointmentsToday",
+      label: "Check-in appuntamento di oggi (lista nomi)",
+    });
+  }
   const places = args.places.map((p) => ({
     name: p.name,
     label: p.label || p.name,
@@ -294,7 +356,7 @@ function isVoiceAction(a: unknown): a is VoiceAction {
     const m = (a as { module?: string }).module;
     return (
       typeof m === "string" &&
-      OPEN_MODULES.some((x) => x.id === m)
+      (OPEN_MODULES.some((x) => x.id === m) || m === "appointmentsToday")
     );
   }
   if (t === "stop" || t === "menu") return true;
@@ -319,15 +381,60 @@ export function sanitizeVoiceResult(
       if (!matched) continue;
       actions.push({ ...a, placeName: matched });
     } else if (a.type === "open") {
+      if (a.module === "appointmentsToday") {
+        if (!modules.appointments) continue;
+        actions.push(a);
+        continue;
+      }
       if (!allowed.has(a.module)) continue;
       actions.push(a);
     } else {
       actions.push(a);
     }
   }
-  return { ...result, actions };
+  return {
+    ...result,
+    speak: ensureItalianQuestionMark(result.speak),
+    actions,
+  };
+}
+
+/** Aggiunge «?» se la frase è chiaramente una domanda senza punto. */
+export function ensureItalianQuestionMark(speak: string): string {
+  const t = speak.trim();
+  if (!t || /[?!…]$/.test(t)) return t;
+  const lower = t.toLowerCase();
+  const starts =
+    /^(chi|che|cosa|come|dove|quando|perché|perche|quanto|quale|quali|puoi|potresti|vuoi|vorresti|sai|mi (puoi|sai|dici)|hai |c'?è |ci sono|posso|possiamo)\b/.test(
+      lower
+    );
+  return starts ? `${t}?` : t;
 }
 
 export function openaiConfigured(): boolean {
   return Boolean(process.env.OPENAI_API_KEY?.trim());
+}
+
+function speakNowItaly(wantDate: boolean): string {
+  const d = new Date();
+  try {
+    if (wantDate) {
+      const day = new Intl.DateTimeFormat("it-IT", {
+        timeZone: "Europe/Rome",
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      }).format(d);
+      return `Oggi è ${day}.`;
+    }
+    const time = new Intl.DateTimeFormat("it-IT", {
+      timeZone: "Europe/Rome",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(d);
+    return `Sono le ${time}.`;
+  } catch {
+    return "Non riesco a leggere l'orologio in questo momento.";
+  }
 }

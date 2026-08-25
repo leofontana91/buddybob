@@ -6,6 +6,11 @@
     <string name="go_to">Vai a…</string>
     <string name="motion">Movimento</string>
     <string name="speech">Voce</string>
+    <string name="speech_talk_title">Parla con me</string>
+    <string name="speech_talk_hint">Di\' «Bob» oppure tocca il microfono</string>
+    <string name="speech_hint_listening">Ti ascolto…</string>
+    <string name="speech_hint_thinking">Un momento…</string>
+    <string name="speech_hint_speaking">Eccomi!</string>
     <string name="follow">Segui</string>
     <string name="navigation">Navigazione</string>
     <string name="more">Altro</string>
@@ -33,10 +38,17 @@
     <string name="status_ready">Pronto</string>
     <string name="status_waiting_robot">In attesa di RobotOS…</string>
 
+    <string name="bob_avatar_desc">Avatar BOB</string>
+    <string name="bob_avatar_zzz">Zzz</string>
+    <string name="bob_avatar_knock">Toc toc… c\'è nessuno?</string>
+    <string name="bob_avatar_thinking">Sto pensando</string>
     <string name="reception_idle_title">In attesa</string>
-    <string name="voice_heard_label">Ho capito</string>
+    <string name="voice_heard_label">Ho sentito</string>
+    <string name="voice_said_label">Ho detto</string>
+    <string name="voice_listening_hint">Ti ascolto — parla pure</string>
+    <string name="voice_mic_button">Parla con BOB</string>
     <string name="voice_moving_placeholder">Sto andando a %1$s</string>
-    <string name="reception_idle_hint">Quando qualcuno si ferma davanti, BOB saluta e apre i comandi.\nTocca lo schermo per provarlo subito.\nComandi vocali: stai di fronte e di\' «Bob», poi cosa vuoi.</string>
+    <string name="reception_idle_hint">BOB è qui — avvicinati o tocca lo schermo.\nDi\' «Bob» una volta e il comando, oppure tocca il microfono.</string>
     <string name="reception_simulate">Simula ospite</string>
     <string name="reception_face">Faccia sorridente</string>
     <string name="reception_welcome">Benvenuto</string>
@@ -64,6 +76,25 @@
     <string name="appointments_calling">Sto chiamando un operatore…</string>
     <string name="appointments_called">Operatore avvisato</string>
     <string name="appointments_checked_in">Check-in inviato</string>
+    <string name="voice_memos_title">Memo vocali</string>
+    <string name="voice_memos_hint">Registra un messaggio: verrà caricato online e trascritto.</string>
+    <string name="voice_memos_idle">Pronto a registrare</string>
+    <string name="voice_memos_start">Inizia a registrare</string>
+    <string name="voice_memos_stop">Fine registrazione</string>
+    <string name="voice_memos_recording">In registrazione…</string>
+    <string name="voice_memos_uploading">Invio e trascrizione…</string>
+    <string name="voice_memos_done">Memo salvato</string>
+    <string name="voice_memos_done_speak">Memo salvato e trascritto.</string>
+    <string name="voice_memos_saved_no_transcript">Memo salvato (trascrizione non disponibile)</string>
+    <string name="voice_memos_no_transcript">Nessuna trascrizione.</string>
+    <string name="voice_memos_record_error">Non riesco a registrare. Controlla il microfono.</string>
+    <string name="voice_memos_upload_error">Invio fallito. Controlla la connessione.</string>
+    <string name="voice_memos_not_paired">Robot non abbinato. Fai prima il pairing.</string>
+    <string name="voice_memos_await_start">Tocca Inizia a registrare</string>
+    <string name="voice_memos_await_hint">Quando sei pronto, premi il pulsante per registrare. Poi Fine registrazione per salvare e trascrivere.</string>
+    <string name="voice_memos_recent_title">Ultimi memo</string>
+    <string name="voice_memos_empty">Nessun memo ancora.</string>
+    <string name="voice_memos_list_error">Non riesco a caricare i memo.</string>
 
     <string name="pairing_title">Associa robot</string>
     <string name="pairing_status_none">Non associato. Chiedi al Super Admin il codice a 6 cifre.</string>

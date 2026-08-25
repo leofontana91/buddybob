@@ -54,19 +54,19 @@ export default function UsersPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold tracking-tight">Utenti</h1>
+      <h1 className="bob-page-title">Utenti</h1>
       <p className="text-[var(--bob-muted)] mt-1">
         Persone della tua organizzazione, ognuna con i propri appuntamenti
       </p>
 
       <form
         onSubmit={create}
-        className="mt-8 grid md:grid-cols-4 gap-3 rounded-2xl bg-white border border-[var(--bob-line)] p-4"
+        className="mt-8 grid md:grid-cols-4 gap-3 bob-card p-4"
       >
         <input
           required
           placeholder="Nome"
-          className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+          className="bob-input"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
@@ -74,7 +74,7 @@ export default function UsersPage() {
           required
           type="email"
           placeholder="Email"
-          className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+          className="bob-input"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -83,13 +83,13 @@ export default function UsersPage() {
           type="password"
           minLength={6}
           placeholder="Password"
-          className="rounded-xl border border-[var(--bob-line)] px-3 py-2 bg-[var(--bob-cream)]"
+          className="bob-input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
         <button
           type="submit"
-          className="rounded-full bg-[var(--bob-black)] text-white px-5 py-2 font-medium"
+          className="bob-btn px-5 py-2 font-medium"
         >
           Crea utente
         </button>
@@ -105,7 +105,7 @@ export default function UsersPage() {
           users.map((u) => (
             <li
               key={u.id}
-              className="rounded-2xl bg-white border border-[var(--bob-line)] px-4 py-3 flex justify-between gap-3"
+              className="bob-card px-4 py-3 flex justify-between gap-3"
             >
               <div>
                 <p className="font-semibold">{u.name}</p>
@@ -114,7 +114,7 @@ export default function UsersPage() {
                 </p>
               </div>
               <button
-                className="text-sm rounded-full border border-[var(--bob-line)] px-3 py-1.5 self-start"
+                className="text-sm bob-btn-secondary px-3 py-1.5 self-start"
                 onClick={() => remove(u.id)}
               >
                 Elimina
