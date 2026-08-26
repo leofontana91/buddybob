@@ -128,10 +128,10 @@ export function buildRobotConfig(
   const modules = {
     reception: m.reception,
     goTo: m.goTo,
-    motion: m.motion,
+    motion: true,
     speech: m.speech,
-    follow: m.follow,
-    charge: m.charge,
+    follow: true,
+    charge: true,
     settings: m.settings,
   };
 

@@ -42,6 +42,8 @@ export async function GET(req: Request) {
       id: v.id,
       firstName: v.firstName,
       lastName: v.lastName,
+      hostUserId: v.hostUserId,
+      hostName: v.hostName || "",
       enteredAt: v.enteredAt.toISOString(),
       exitedAt: v.exitedAt?.toISOString() ?? null,
     })),

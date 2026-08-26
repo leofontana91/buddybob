@@ -39,7 +39,8 @@ model Account {
   users   Account[] @relation("AdminUsers")
 
   robotLinks   AdminRobot[]
-  appointments Appointment[]
+  appointments Appointment[] @relation("AppointmentGuestUser")
+  hostedAppts  Appointment[] @relation("AppointmentHost")
   createdAt    DateTime      @default(now())
 }
 
@@ -127,11 +128,22 @@ model Appointment {
   id         String   @id @default(cuid())
   robotId    String
   robot      Robot    @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  /// Legacy: a volte ospite piattaforma; preferire hostUserId per il referente
   userId     String?
-  user       Account? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user       Account? @relation("AppointmentGuestUser", fields: [userId], references: [id], onDelete: SetNull)
+  /// Utente azienda con cui si ha l'appuntamento (lane calendario)
+  hostUserId String?
+  host       Account? @relation("AppointmentHost", fields: [hostUserId], references: [id], onDelete: SetNull)
+  typeId     String?
+  type       AppointmentType? @relation(fields: [typeId], references: [id], onDelete: SetNull)
+  roomId     String?
+  room       MeetingRoom? @relation(fields: [roomId], references: [id], onDelete: SetNull)
   guestName  String
   guestPhone String?
   startsAt   DateTime
+  /// Fine intervallo (riserva sala / durata tipo)
+  endsAt     DateTime?
+  /// scheduled | checked_in | in_progress | completed | cancelled | no_show
   status     String   @default("scheduled")
   notes      String?
   createdAt  DateTime @default(now())
@@ -140,6 +152,53 @@ model Appointment {
 
   @@index([robotId, startsAt])
   @@index([userId, startsAt])
+  @@index([hostUserId, startsAt])
+  @@index([roomId, startsAt])
+  @@index([typeId])
+}
+
+/// Tipologia visita (durata) — per azienda
+model AppointmentType {
+  id               String   @id @default(cuid())
+  adminId          String
+  name             String
+  durationMinutes  Int      @default(30)
+  /// Colore UI calendario (hex opzionale)
+  color            String   @default("#1a1a1a")
+  active           Boolean  @default(true)
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  rooms            AppointmentTypeRoom[]
+  appointments     Appointment[]
+
+  @@index([adminId, active])
+}
+
+/// Sala prenotabile — per azienda; opzionale collegamento a punto mappa robot
+model MeetingRoom {
+  id            String   @id @default(cuid())
+  adminId       String
+  name          String
+  /// Nome MapPlace sul robot per accompagnare l'ospite (se presente)
+  mapPlaceName  String?
+  active        Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  types         AppointmentTypeRoom[]
+  appointments  Appointment[]
+
+  @@index([adminId, active])
+}
+
+model AppointmentTypeRoom {
+  typeId String
+  roomId String
+  type   AppointmentType @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  room   MeetingRoom     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@id([typeId, roomId])
 }
 
 model OperatorAlert {
@@ -284,13 +343,16 @@ model FormSubmission {
 }
 
 model AccessVisit {
-  id        String    @id @default(cuid())
-  robotId   String
-  robot     Robot     @relation(fields: [robotId], references: [id], onDelete: Cascade)
-  firstName String
-  lastName  String
-  enteredAt DateTime  @default(now())
-  exitedAt  DateTime?
+  id         String    @id @default(cuid())
+  robotId    String
+  robot      Robot     @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  firstName  String
+  lastName   String
+  /// Utente azienda con cui ha appuntamento / da incontrare (opzionale)
+  hostUserId String?
+  hostName   String    @default("")
+  enteredAt  DateTime  @default(now())
+  exitedAt   DateTime?
 
   @@index([robotId, enteredAt])
   @@index([robotId, exitedAt])

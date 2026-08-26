@@ -15,6 +15,13 @@ export type AdminModules = {
   settings: boolean;
 };
 
+/**
+ * Capacità di serie su ogni robot: non si vendono / non si spengono come moduli.
+ * Restano nel tipo per compatibilità col config APK.
+ */
+export const CORE_ALWAYS_ON = ["motion", "follow", "charge"] as const;
+export type CoreAlwaysOnKey = (typeof CORE_ALWAYS_ON)[number];
+
 export const DEFAULT_ADMIN_MODULES: AdminModules = {
   reception: true,
   appointments: true,
@@ -27,13 +34,13 @@ export const DEFAULT_ADMIN_MODULES: AdminModules = {
   callOperator: true,
   voiceMemos: true,
   accessControl: true,
-  charge: false,
+  charge: true,
   settings: true,
 };
 
 export const MODULE_LABELS: Record<keyof AdminModules, string> = {
   reception: "Accoglienza",
-  appointments: "Appuntamenti",
+  appointments: "Impostazioni appuntamenti",
   goTo: "Vai a…",
   motion: "Movimento",
   speech: "Voce / Parla con me",
@@ -47,7 +54,12 @@ export const MODULE_LABELS: Record<keyof AdminModules, string> = {
   settings: "Impostazioni tecniche",
 };
 
-/** Admin pages that configure a module. */
+/** Moduli che Super Admin può ancora abilitare/disabilitare per azienda. */
+export const TOGGLEABLE_MODULE_KEYS = (
+  Object.keys(MODULE_LABELS) as (keyof AdminModules)[]
+).filter((k) => !CORE_ALWAYS_ON.includes(k as CoreAlwaysOnKey));
+
+/** Admin pages that configure a module (niente link per le core always-on). */
 export const MODULE_ADMIN_HREF: Partial<Record<keyof AdminModules, string>> = {
   reception: "/admin/modules/reception",
   appointments: "/admin/modules/appointments",
@@ -57,11 +69,17 @@ export const MODULE_ADMIN_HREF: Partial<Record<keyof AdminModules, string>> = {
   speech: "/admin/modules/speech",
   callOperator: "/admin/modules/operator",
   games: "/admin/modules/games",
-  follow: "/admin/modules/follow",
-  motion: "/admin/modules/motion",
   voiceMemos: "/admin/modules/memos",
-  charge: "/admin/modules/charge",
 };
+
+function withCoreAlwaysOn(modules: AdminModules): AdminModules {
+  return {
+    ...modules,
+    motion: true,
+    follow: true,
+    charge: true,
+  };
+}
 
 export function enabledModuleLinks(modules: AdminModules) {
   return (Object.keys(MODULE_ADMIN_HREF) as (keyof AdminModules)[])
@@ -76,12 +94,14 @@ export function enabledModuleLinks(modules: AdminModules) {
 export function parseModules(json: string | null | undefined): AdminModules {
   try {
     const raw = json ? JSON.parse(json) : {};
-    return { ...DEFAULT_ADMIN_MODULES, ...raw };
+    return withCoreAlwaysOn({ ...DEFAULT_ADMIN_MODULES, ...raw });
   } catch {
     return { ...DEFAULT_ADMIN_MODULES };
   }
 }
 
 export function stringifyModules(modules: Partial<AdminModules>): string {
-  return JSON.stringify({ ...DEFAULT_ADMIN_MODULES, ...modules });
+  return JSON.stringify(
+    withCoreAlwaysOn({ ...DEFAULT_ADMIN_MODULES, ...modules })
+  );
 }

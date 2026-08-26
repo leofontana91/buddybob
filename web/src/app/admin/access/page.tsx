@@ -8,6 +8,7 @@ type Visit = {
   id: string;
   firstName: string;
   lastName: string;
+  hostName?: string;
   enteredAt: string;
   exitedAt: string | null;
 };
@@ -63,7 +64,8 @@ export default function AccessPage() {
         <div>
           <h1 className="bob-page-title">Controllo accessi</h1>
           <p className="text-[var(--bob-muted)] mt-1">
-            Ingressi e uscite registrati dal robot (nome, cognome, orario).
+            Ingressi e uscite dal robot, con eventuale referente aziendale
+            scelto tra gli utenti registrati.
           </p>
         </div>
         <label className="text-sm">
@@ -94,6 +96,7 @@ export default function AccessPage() {
                   </p>
                   <p className="text-sm text-[var(--bob-muted)]">
                     Entrato {format(new Date(v.enteredAt), "HH:mm")}
+                    {v.hostName ? ` · con ${v.hostName}` : ""}
                   </p>
                 </div>
                 <button
@@ -120,9 +123,16 @@ export default function AccessPage() {
                 key={v.id}
                 className="bob-card px-4 py-3 flex flex-wrap justify-between gap-3"
               >
-                <p className="font-semibold">
-                  {v.firstName} {v.lastName}
-                </p>
+                <div>
+                  <p className="font-semibold">
+                    {v.firstName} {v.lastName}
+                  </p>
+                  {v.hostName ? (
+                    <p className="text-sm text-[var(--bob-muted)]">
+                      Appuntamento con {v.hostName}
+                    </p>
+                  ) : null}
+                </div>
                 <p className="text-sm text-[var(--bob-muted)]">
                   In {format(new Date(v.enteredAt), "HH:mm")}
                   {v.exitedAt

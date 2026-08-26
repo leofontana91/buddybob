@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   DEFAULT_ADMIN_MODULES,
   MODULE_LABELS,
+  TOGGLEABLE_MODULE_KEYS,
   AdminModules,
 } from "@/lib/modules";
 
@@ -444,7 +445,7 @@ export default function SuperPage() {
 
         <h3 className="font-medium pt-2">Moduli abilitati</h3>
         <div className="flex flex-wrap gap-2">
-          {(Object.keys(MODULE_LABELS) as (keyof AdminModules)[]).map((key) => (
+          {TOGGLEABLE_MODULE_KEYS.map((key) => (
             <label
               key={key}
               className={`flex items-center gap-2 border px-3 py-1.5 text-sm cursor-pointer ${
@@ -462,6 +463,9 @@ export default function SuperPage() {
             </label>
           ))}
         </div>
+        <p className="text-xs text-[var(--bob-muted)]">
+          Movimento, Segui e Ricarica sono di serie su ogni robot.
+        </p>
 
         <button
           type="submit"
@@ -533,10 +537,10 @@ export default function SuperPage() {
                 <p className="text-xs text-[var(--bob-muted)] mb-2">
                   Spegnendo un modulo sparisce dal menu del robot. Il robot
                   associato e online aggiorna da solo entro circa 30 secondi.
+                  Movimento, Segui e Ricarica restano sempre disponibili.
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {(Object.keys(MODULE_LABELS) as (keyof AdminModules)[]).map(
-                    (key) => (
+                  {TOGGLEABLE_MODULE_KEYS.map((key) => (
                       <label
                         key={key}
                         className="flex items-center gap-1.5 text-xs bob-btn-secondary px-2.5 py-1"
@@ -554,8 +558,7 @@ export default function SuperPage() {
                         />
                         {MODULE_LABELS[key]}
                       </label>
-                    )
-                  )}
+                    ))}
                 </div>
               </div>
 

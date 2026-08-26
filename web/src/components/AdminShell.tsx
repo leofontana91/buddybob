@@ -123,6 +123,14 @@ export function AdminShell({
 
   const moduleLinks = withRobotSelect ? enabledModuleLinks(modules) : [];
 
+  const featureLinks =
+    withRobotSelect && modules.appointments
+      ? [
+          { href: "/admin/calendar", label: "Calendario" },
+          { href: "/admin/guests", label: "Gestione clienti" },
+        ]
+      : [];
+
   function isActive(href: string) {
     if (href === "/admin" || href === "/super" || href === "/me") {
       return pathname === href;
@@ -175,6 +183,22 @@ export function AdminShell({
             ) : null}
           </Link>
         ))}
+
+        {featureLinks.length > 0 ? (
+          <div className="mt-3 pt-3 border-t border-[var(--bob-line)]">
+            <p className="bob-label mb-1.5 px-2">Appuntamenti</p>
+            {featureLinks.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className="bob-nav-item"
+                data-active={isActive(l.href) ? "true" : "false"}
+              >
+                {l.label}
+              </Link>
+            ))}
+          </div>
+        ) : null}
 
         {moduleLinks.length > 0 ? (
           <div className="mt-3 pt-3 border-t border-[var(--bob-line)]">
