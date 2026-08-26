@@ -195,7 +195,7 @@ model Appointment {
   updatedAt  DateTime @updatedAt
   alerts     OperatorAlert[]
 
-  @@unique([robotId, externalSource, externalId])
+  @@index([robotId, externalSource, externalId])
   @@index([robotId, startsAt])
   @@index([userId, startsAt])
   @@index([hostUserId, startsAt])

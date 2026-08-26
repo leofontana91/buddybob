@@ -12,7 +12,7 @@ ALTER TABLE "RobotSettings" ADD COLUMN IF NOT EXISTS "calendarLastSyncAt" TIMEST
 ALTER TABLE "Appointment" ADD COLUMN IF NOT EXISTS "externalId" TEXT;
 ALTER TABLE "Appointment" ADD COLUMN IF NOT EXISTS "externalSource" TEXT;
 
-CREATE UNIQUE INDEX IF NOT EXISTS "Appointment_robotId_externalSource_externalId_key"
+CREATE INDEX IF NOT EXISTS "Appointment_robotId_externalSource_externalId_idx"
   ON "Appointment"("robotId", "externalSource", "externalId");
 
 CREATE TABLE IF NOT EXISTS "GuestContact" (
