@@ -19,7 +19,7 @@ export default async function SuperLayout({
       operatorName={session.name}
       roleLabel="Super Admin"
       withRobotSelect={false}
-      links={[{ href: "/super", label: "Account & Robot" }]}
+      links={[{ href: "/super", label: "Flotta" }]}
     >
       {children}
     </AdminShell>

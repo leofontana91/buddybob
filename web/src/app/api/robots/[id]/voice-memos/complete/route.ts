@@ -8,6 +8,7 @@ import {
   publicVoiceMemoUrl,
 } from "@/lib/supabaseStorageAdmin";
 import { transcribeAudio } from "@/lib/voiceMemoTranscribe";
+import { normalizeSpeechLanguage, speechPhrases } from "@/lib/speechLanguage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,10 +67,16 @@ export async function POST(req: Request, ctx: Ctx) {
 
   try {
     const bytes = await downloadPlaceMediaObject(objectPath);
+    const settings = await prisma.robotSettings.findUnique({
+      where: { robotId: id },
+    });
+    const lang = normalizeSpeechLanguage(settings?.speechLanguage);
+    const pack = speechPhrases(lang);
     const transcript = await transcribeAudio({
       bytes,
       fileName: fileName || "memo.m4a",
       contentType,
+      language: lang,
     });
     const updated = await prisma.voiceMemo.update({
       where: { id: memo.id },
@@ -81,9 +88,7 @@ export async function POST(req: Request, ctx: Ctx) {
       audioUrl: updated.audioUrl,
       transcript: updated.transcript,
       status: updated.status,
-      speak: transcript
-        ? "Memo salvato e trascritto."
-        : "Memo salvato.",
+      speak: transcript ? pack.voiceMemoSaved : pack.voiceMemoSavedEmpty,
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);

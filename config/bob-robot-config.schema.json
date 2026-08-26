@@ -126,6 +126,18 @@
         },
         "configUpdateFailed": {
           "type": "string"
+        },
+        "wakeHintLabel": {
+          "type": "string",
+          "description": "Label above wake hint on voice dock"
+        },
+        "wakeHint": {
+          "type": "string",
+          "description": "On-screen hint to say the wake word"
+        },
+        "wakeGreeting": {
+          "type": "string",
+          "description": "Spoken after wake word before listening"
         }
       }
     },
@@ -176,6 +188,12 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "language": {
+          "type": "string",
+          "enum": ["it", "en", "de", "fr", "es"],
+          "default": "it",
+          "description": "Spoken language for TTS phrases and AI replies. Monitor UI stays Italian."
+        },
         "enabledOnStart": {
           "type": "boolean",
           "default": true

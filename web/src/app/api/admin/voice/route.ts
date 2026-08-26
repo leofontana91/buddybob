@@ -5,7 +5,7 @@ import { modulesForRobot } from "@/lib/appointments";
 import { prisma } from "@/lib/db";
 import { resolveVoiceWithAi } from "@/lib/voiceAi";
 import {
-  ensureItalianQuestionMark,
+  ensureSpeechQuestionMark,
   openaiConfigured,
   placesForVoiceAi,
   type VoicePlace,
@@ -15,6 +15,10 @@ import {
   clearVoiceHistory,
   getVoiceHistory,
 } from "@/lib/voiceMemory";
+import {
+  normalizeSpeechLanguage,
+  speechAiUnavailable,
+} from "@/lib/speechLanguage";
 
 const schema = z.object({
   robotId: z.string().min(1),
@@ -79,6 +83,7 @@ export async function POST(req: Request) {
   const settings = await prisma.robotSettings.findUnique({
     where: { robotId: parsed.data.robotId },
   });
+  const lang = normalizeSpeechLanguage(settings?.speechLanguage);
 
   if (parsed.data.reset) {
     clearVoiceHistory(parsed.data.robotId, sessionKey);
@@ -100,10 +105,11 @@ export async function POST(req: Request) {
     modules,
     instructions: settings?.voiceInstructions,
     history,
+    speechLanguage: lang,
   });
 
   const result = fromAi ?? {
-    speak: "Non riesco a rispondere adesso. Riprova tra un momento.",
+    speak: speechAiUnavailable(lang),
     actions: [] as const,
     source: "rules" as const,
   };
@@ -111,7 +117,7 @@ export async function POST(req: Request) {
   if (fromAi?.newTopic) {
     clearVoiceHistory(parsed.data.robotId, sessionKey);
   }
-  const speak = ensureItalianQuestionMark(result.speak);
+  const speak = ensureSpeechQuestionMark(result.speak);
   appendVoiceTurn(parsed.data.robotId, sessionKey, text, speak);
 
   return NextResponse.json({

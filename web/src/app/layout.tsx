@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Poppins } from "next/font/google";
 import { CANONICAL_APP_URL } from "@/lib/appUrl";
 import "./globals.css";
 
@@ -13,10 +13,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const poppins = Poppins({
+  variable: "--font-poppins",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
 export const metadata: Metadata = {
   metadataBase: new URL(CANONICAL_APP_URL),
-  title: "BOB Admin — Appuntamenti",
-  description: "Piattaforma gestione agenda e robot BOB",
+  title: "BOB — Piattaforma",
+  description: "Accogli, accompagna e parla con i visitatori. BOB fa il lavoro operativo.",
 };
 
 export const viewport: Viewport = {
@@ -30,7 +36,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="it">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} ${poppins.variable} antialiased`}
+      >
         {children}
       </body>
     </html>

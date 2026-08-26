@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { resolveVoiceWithAi } from "@/lib/voiceAi";
 import {
   openaiConfigured,
-  ensureItalianQuestionMark,
+  ensureSpeechQuestionMark,
   placesForVoiceAi,
   type VoicePlace,
 } from "@/lib/voiceIntent";
@@ -15,6 +15,11 @@ import {
   clearVoiceHistory,
   getVoiceHistory,
 } from "@/lib/voiceMemory";
+import {
+  normalizeSpeechLanguage,
+  speechAiUnavailable,
+  speechPhrases,
+} from "@/lib/speechLanguage";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -41,10 +46,16 @@ export async function POST(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Testo richiesto" }, { status: 400 });
   }
 
+  const settings = await prisma.robotSettings.findUnique({
+    where: { robotId: id },
+  });
+  const lang = normalizeSpeechLanguage(settings?.speechLanguage);
+  const pack = speechPhrases(lang);
+
   const modules = await modulesForRobot(id);
   if (!modules.speech) {
     return NextResponse.json({
-      speak: "Il modulo voce non è attivo.",
+      speak: pack.speechModuleOff,
       actions: [],
       source: "rules",
     });
@@ -62,7 +73,6 @@ export async function POST(req: Request, ctx: Ctx) {
     }))
   );
 
-  const settings = await prisma.robotSettings.findUnique({ where: { robotId: id } });
   const text = parsed.data.text;
   const sessionKey = parsed.data.sessionKey?.trim() || "default";
 
@@ -75,8 +85,7 @@ export async function POST(req: Request, ctx: Ctx) {
   // Tutto dall’AI — niente regole locali goto/apri (evitano falsi «vado a a»)
   if (!openaiConfigured()) {
     return NextResponse.json({
-      speak:
-        "La voce intelligente non è configurata. Imposta OPENAI_API_KEY sul server.",
+      speak: pack.openaiMissing,
       actions: [],
       source: "rules",
       aiConfigured: false,
@@ -89,11 +98,11 @@ export async function POST(req: Request, ctx: Ctx) {
     modules,
     instructions: settings?.voiceInstructions,
     history,
+    speechLanguage: lang,
   });
 
   const result = fromAi ?? {
-    speak:
-      "Non riesco a rispondere adesso. Riprova tra un momento.",
+    speak: speechAiUnavailable(lang),
     actions: [] as const,
     source: "rules" as const,
   };
@@ -101,7 +110,7 @@ export async function POST(req: Request, ctx: Ctx) {
   if (fromAi?.newTopic) {
     clearVoiceHistory(id, sessionKey);
   }
-  const speak = ensureItalianQuestionMark(result.speak);
+  const speak = ensureSpeechQuestionMark(result.speak);
   appendVoiceTurn(id, sessionKey, text, speak);
 
   return NextResponse.json({

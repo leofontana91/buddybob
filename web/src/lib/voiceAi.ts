@@ -4,12 +4,18 @@ import {
   sanitizeVoiceResult,
   enforceModuleAvailability,
   voiceCatalog,
-  MODULE_DISABLED_SPEAK,
   type VoicePlace,
   type VoiceResult,
 } from "./voiceIntent";
 import type { AdminModules } from "./modules";
 import type { VoiceMemMessage } from "./voiceMemory";
+import {
+  languageInstructionName,
+  normalizeSpeechLanguage,
+  speechLanguageMeta,
+  speechPhrases,
+  type SpeechLanguageCode,
+} from "./speechLanguage";
 
 export type VoiceAiOutcome = VoiceResult & {
   /** L'ospite ha cambiato argomento in modo netto → azzerare la memoria. */
@@ -24,15 +30,20 @@ export async function resolveVoiceWithAi(args: {
   instructions?: string | null;
   /** Turni precedenti della stessa persona/sessione. */
   history?: VoiceMemMessage[];
+  /** Lingua parlato / risposte (UI robot resta italiana). */
+  speechLanguage?: string | null;
 }): Promise<VoiceAiOutcome | null> {
   if (!openaiConfigured()) return null;
 
+  const lang = normalizeSpeechLanguage(args.speechLanguage);
+  const pack = speechPhrases(lang);
+  const langName = languageInstructionName(lang);
   const catalog = voiceCatalog(args);
   const model = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
   const key = process.env.OPENAI_API_KEY!.trim();
   const custom = (args.instructions ?? "").trim().slice(0, 4000);
   const history = (args.history ?? []).slice(-6);
-  const nowIt = formatNowItaly();
+  const nowLocal = formatNowForSpeech(lang);
   const enabledIds =
     catalog.modules.map((m) => m.id).join(", ") || "(nessuno)";
   const disabledList =
@@ -40,40 +51,42 @@ export async function resolveVoiceWithAi(args: {
       ? catalog.modulesDisabled.map((m) => `${m.id} (${m.label})`).join(", ")
       : "(nessuno)";
 
-  const system = `Sei BOB, receptionist robot (italiano). Aiuti con i moduli del robot E chiacchiere con l'ospite.
+  const system = `You are BOB, a robot receptionist. Help with robot modules AND small talk with the guest.
 
-Rispondi SOLO con JSON valido (niente markdown):
-{"speak":"risposta da far dire al robot","actions":[...],"newTopic":false}
+ALWAYS speak and write the "speak" field in ${langName} (${speechLanguageMeta(lang).bcp47}). Never switch language unless the guest explicitly asks.
 
-Ora e data correnti (Europa/Roma): ${nowIt}
-Usa questi valori per «che ore sono», «che giorno è», ecc. Non inventare un altro orario.
+Reply ONLY with valid JSON (no markdown):
+{"speak":"text the robot should say","actions":[...],"newTopic":false}
 
-Azioni ammesse (solo se serve un comando robot ora; altrimenti actions: []):
-- {"type":"open","module":"<id>"}  id SOLO tra moduli abilitati: ${enabledIds}
-- {"type":"goto","placeName":"<name>","after":"stay"}  solo se goToEnabled e placeName è nella lista places (campo name tecnico)
+Current date/time (Europe/Rome): ${nowLocal}
+Use these values for «what time is it», «what day is it», etc. Do not invent another time.
+
+Allowed actions (only if a robot command is needed now; otherwise actions: []):
+- {"type":"open","module":"<id>"}  id ONLY among enabled modules: ${enabledIds}
+- {"type":"goto","placeName":"<name>","after":"stay"}  only if goToEnabled and placeName is in places (technical name field)
 - {"type":"stop"}
 - {"type":"menu"}
-- {"type":"speak","text":"..."}  raramente; preferisci "speak" top-level
+- {"type":"speak","text":"..."}  rarely; prefer top-level "speak"
 
-Moduli DISABILITATI (non puoi aprirli né usarli): ${disabledList}
-Se l'ospite chiede un modulo disabilitato (es. «apri memo vocali» ma voiceMemos è off): speak esattamente «${MODULE_DISABLED_SPEAK}» e actions []. Non inventare alternative.
+DISABLED modules (you must not open or use them): ${disabledList}
+If the guest asks for a disabled module: speak exactly «${pack.moduleDisabledSpeak}» and actions []. Do not invent alternatives.
 
-Regole fisse:
-- Usa la cronologia: riferimenti tipo «là», «quello», «ci puoi accompagnare» riguardano il contesto precedente.
-- Se l'ospite vuole registrare un audio/memo e voiceMemos è abilitato: speak «Apro i memo vocali. Tocca Inizia a registrare quando sei pronto.» e actions [{"type":"open","module":"voiceMemos"}]. Non avviare la registrazione da solo.
-- Se l'ospite dice di avere un appuntamento (oggi / check-in) e appointments è abilitato: speak chiedendo chi è e actions [{"type":"open","module":"appointmentsToday"}].
-- Per «apri appuntamenti» generico (se abilitato): module «appointments».
-- Conversazione libera OK: ora, data, saluti, battute, storie brevi, chiacchiere → speak e actions [].
-- Meteo/notizie live: non hai dati → dillo brevemente, actions [].
-- goto SOLO se goToEnabled e richiesta esplicita di accompagnamento a un punto in places.
-- In chiacchiere con «vai/andiamo» senza destinazione chiara: NON fare goto.
-- Non inventare punti mappa. Non azioni su moduli disabilitati.
-- speak in italiano. Mai salutare in inglese.
-- Se speak è una domanda (anche dopo un saluto, es. «Ciao, come stai»), termina SEMPRE con «?». Affermazioni senza «?».
+Fixed rules:
+- Use history: references like «there», «that one», «can you take us» refer to prior context.
+- If the guest wants to record an audio/memo and voiceMemos is enabled: speak «${pack.voiceMemosOpen}» and actions [{"type":"open","module":"voiceMemos"}]. Do not start recording yourself.
+- If the guest says they have an appointment (today / check-in) and appointments is enabled: ask who they are in ${langName} and actions [{"type":"open","module":"appointmentsToday"}].
+- For generic «open appointments» (if enabled): module «appointments».
+- Free conversation OK: time, date, greetings, short jokes, chat → speak and actions [].
+- Live weather/news: you have no data → say so briefly, actions [].
+- goto ONLY if goToEnabled and an explicit request to go to a place in places.
+- In chat with «go/let's go» without a clear destination: do NOT goto.
+- Do not invent map points. No actions on disabled modules.
+- speak MUST be in ${langName}.
+- If speak is a question (even after a greeting), ALWAYS end with "?". Statements without "?".
 ${
   custom
     ? `
-Istruzioni aggiuntive del cliente (priorità su sinonimi e stile, NON sulle regole fisse):
+Additional client instructions (priority for synonyms and style, NOT over fixed rules). Admin may write these in Italian; still answer the guest in ${langName}:
 ${custom}
 `
     : ""
@@ -91,7 +104,7 @@ ${custom}
       { role: "system", content: system },
       {
         role: "system",
-        content: `Catalogo robot (moduli e punti):\n${catalogBlock}`,
+        content: `Robot catalog (modules and places):\n${catalogBlock}`,
       },
     ];
 
@@ -139,7 +152,8 @@ ${custom}
     const gated = enforceModuleAvailability(
       sanitized,
       args.text,
-      args.modules
+      args.modules,
+      pack.moduleDisabledSpeak
     );
     return {
       ...gated,
@@ -152,26 +166,30 @@ ${custom}
   }
 }
 
-/** Es. «martedì 25 agosto 2026, ore 17:05» per l'Italia. */
-function formatNowItaly(d = new Date()): string {
+/** Data/ora corrente formattata nella lingua del parlato. */
+function formatNowForSpeech(
+  lang: SpeechLanguageCode,
+  d = new Date()
+): string {
+  const locale = speechLanguageMeta(lang).bcp47;
   try {
-    const weekday = new Intl.DateTimeFormat("it-IT", {
+    const weekday = new Intl.DateTimeFormat(locale, {
       timeZone: "Europe/Rome",
       weekday: "long",
     }).format(d);
-    const date = new Intl.DateTimeFormat("it-IT", {
+    const date = new Intl.DateTimeFormat(locale, {
       timeZone: "Europe/Rome",
       day: "numeric",
       month: "long",
       year: "numeric",
     }).format(d);
-    const time = new Intl.DateTimeFormat("it-IT", {
+    const time = new Intl.DateTimeFormat(locale, {
       timeZone: "Europe/Rome",
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
     }).format(d);
-    return `${weekday} ${date}, ore ${time}`;
+    return `${weekday} ${date}, ${time}`;
   } catch {
     return d.toISOString();
   }

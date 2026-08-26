@@ -19,7 +19,7 @@ export default async function MeLayout({
       operatorName={session.name}
       roleLabel="Utente"
       withRobotSelect={false}
-      links={[{ href: "/me", label: "I miei appuntamenti" }]}
+      links={[{ href: "/me", label: "Programma" }]}
     >
       {children}
     </AdminShell>

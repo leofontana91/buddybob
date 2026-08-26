@@ -17,6 +17,11 @@ import {
 } from "./receptionSettings";
 import { placeMediaProxyUrl } from "./placeMediaProxy";
 import { objectPathFromPlaceMediaUrl } from "./supabaseStorageAdmin";
+import {
+  speechPhrases,
+  normalizeSpeechLanguage,
+  speechLocale,
+} from "./speechLanguage";
 
 export function parseHm(hm: string, day: Date): Date {
   const [h, m] = hm.split(":").map(Number);
@@ -120,6 +125,7 @@ export function buildRobotConfig(
       idleMediaContentType?: string;
       idleMediaIntervalSec?: number;
       idleMediaStopMode?: string;
+      speechLanguage?: string;
     } | null;
   },
   adminModules?: AdminModules
@@ -130,6 +136,25 @@ export function buildRobotConfig(
     `/book/${robot.id}`
   );
   const m = adminModules ?? DEFAULT_ADMIN_MODULES;
+  const lang = normalizeSpeechLanguage(s?.speechLanguage);
+  const pack = speechPhrases(lang);
+  // Frasi custom admin solo se lingua italiana (altrimenti pacchetto tradotto)
+  const welcome =
+    lang === "it"
+      ? (s?.welcomeSpeak ?? "").trim() || pack.welcome
+      : pack.welcome;
+  const howCanIHelp =
+    lang === "it"
+      ? (s?.howCanIHelpSpeak ?? "").trim() || pack.howCanIHelp
+      : pack.howCanIHelp;
+  const checkInSpeak =
+    lang === "it"
+      ? s?.checkInSpeak ?? pack.checkInSpeak
+      : pack.checkInSpeak;
+  const callOperatorSpeak =
+    lang === "it"
+      ? s?.callOperatorSpeak ?? pack.callOperatorSpeak
+      : pack.callOperatorSpeak;
 
   const receptionButtons = [
     { id: "goTo", label: "Vai a…", enabled: m.goTo },
@@ -183,27 +208,36 @@ export function buildRobotConfig(
       idleMediaUrl: idleUrl,
       idleMediaIntervalSec: s?.idleMediaIntervalSec,
       idleMediaStopMode: s?.idleMediaStopMode,
+      speechLanguage: lang,
     }),
     updatedAt: new Date().toISOString(),
     robot: {
       id: robot.id,
       displayName: robot.displayName,
-      locale: robot.locale,
+      locale: speechLocale(lang),
       timezone: robot.timezone,
     },
     modules,
     phrases: {
-      welcome: (s?.welcomeSpeak ?? "").trim() || "Benvenuto",
-      howCanIHelp: (s?.howCanIHelpSpeak ?? "").trim() || "Come posso aiutarti?",
-      goingTo: "Vado a {place}",
-      arrived: "Siamo arrivati a {place}",
-      navigationFailed: "Non riesco ad arrivare a {place}",
-      followStarted: "Ok, ti seguo",
-      followLost: "Ti ho perso di vista",
-      personNotFound: "Non vedo nessuno da seguire",
-      goodbye: "A presto!",
-      configUpdated: "Configurazione aggiornata",
-      configUpdateFailed: "Aggiornamento configurazione non riuscito",
+      welcome,
+      howCanIHelp,
+      goingTo: pack.goingTo,
+      arrived: pack.arrived,
+      navigationFailed: pack.navigationFailed,
+      followStarted: pack.followStarted,
+      followLost: pack.followLost,
+      personNotFound: pack.personNotFound,
+      goodbye: pack.goodbye,
+      configUpdated: pack.configUpdated,
+      configUpdateFailed: pack.configUpdateFailed,
+      wakeHintLabel: pack.wakeHintLabel,
+      wakeHint: pack.wakeHint,
+      wakeGreeting: pack.wakeGreeting,
+    },
+    speech: {
+      language: lang,
+      enabledOnStart: true,
+      continuousRecognition: false,
     },
     assets: {
       idleScreen: idleMedia,
@@ -213,10 +247,8 @@ export function buildRobotConfig(
         | "qr"
         | "in_app",
       bookingUrl,
-      checkInSpeak:
-        s?.checkInSpeak ?? "Perfetto, ho avvisato che sei arrivato",
-      callOperatorSpeak:
-        s?.callOperatorSpeak ?? "Sto chiamando un operatore",
+      checkInSpeak,
+      callOperatorSpeak,
       apiKey: robot.apiKey,
     },
     reception: {

@@ -3,6 +3,7 @@ import { requireSession, canAccessRobot } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { publicPathUrl } from "@/lib/appUrl";
+import { normalizeSpeechLanguage } from "@/lib/speechLanguage";
 
 export async function GET(req: Request) {
   const session = await requireSession(["ADMIN", "SUPER_ADMIN"]);
@@ -59,6 +60,7 @@ const patchSchema = z.object({
   idleMediaContentType: z.string().max(120).optional(),
   idleMediaIntervalSec: z.number().int().min(0).max(600).optional(),
   idleMediaStopMode: z.enum(["person", "tap"]).optional(),
+  speechLanguage: z.enum(["it", "en", "de", "fr", "es"]).optional(),
 });
 
 export async function PATCH(req: Request) {
@@ -76,7 +78,13 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { robotId, displayName, ...settings } = parsed.data;
+  const { robotId, displayName, ...rawSettings } = parsed.data;
+  const settings = {
+    ...rawSettings,
+    ...(rawSettings.speechLanguage != null
+      ? { speechLanguage: normalizeSpeechLanguage(rawSettings.speechLanguage) }
+      : {}),
+  };
 
   if (displayName) {
     await prisma.robot.update({
@@ -101,6 +109,7 @@ export async function PATCH(req: Request) {
       bookableWeekdays: settings.bookableWeekdays ?? "1,2,3,4,5",
       settingsPin: settings.settingsPin,
       voiceInstructions: settings.voiceInstructions ?? "",
+      speechLanguage: settings.speechLanguage ?? "it",
       welcomeSpeak: settings.welcomeSpeak ?? "Benvenuto",
       howCanIHelpSpeak: settings.howCanIHelpSpeak ?? "Come posso aiutarti?",
       receptionCooldownSec: settings.receptionCooldownSec ?? 45,

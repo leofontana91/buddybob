@@ -106,6 +106,8 @@ model RobotSettings {
   placeSharedJson   String @default("{}")
   /// Istruzioni custom per l'AI vocale (sinonimi, cosa può/non può rispondere)
   voiceInstructions String @default("")
+  /// Lingua parlato/risposte: it | en | de | fr | es (UI resta italiana)
+  speechLanguage    String @default("it")
 
   /// Accoglienza: frase al rilevamento ospite
   welcomeSpeak       String @default("Benvenuto")

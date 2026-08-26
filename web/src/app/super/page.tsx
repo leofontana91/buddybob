@@ -355,11 +355,12 @@ export default function SuperPage() {
   }
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 px-5 py-8 sm:px-8 lg:px-[34px] lg:py-10">
       <div>
-        <h1 className="bob-page-title">Super Admin</h1>
-        <p className="text-[var(--bob-muted)] mt-1">
-          Crea aziende (admin), collega robot per seriale, abilita moduli
+        <p className="bob-eyebrow">Super Admin</p>
+        <h1 className="bob-page-title mt-2">Flotta</h1>
+        <p className="bob-page-sub">
+          Clienti, robot, moduli e aggiornamenti Android.
         </p>
         {msg ? (
           <p className="mt-2 text-sm text-[var(--bob-teal)]">{msg}</p>

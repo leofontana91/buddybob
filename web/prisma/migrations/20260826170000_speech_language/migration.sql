@@ -1,0 +1,1 @@
+ALTER TABLE "RobotSettings" ADD COLUMN IF NOT EXISTS "speechLanguage" TEXT NOT NULL DEFAULT 'it';

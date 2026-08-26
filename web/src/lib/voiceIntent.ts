@@ -254,20 +254,23 @@ export const MODULE_DISABLED_SPEAK =
 export function enforceModuleAvailability(
   result: VoiceResult,
   utterance: string,
-  modules: AdminModules
+  modules: AdminModules,
+  disabledSpeak: string = MODULE_DISABLED_SPEAK
 ): VoiceResult {
   const n = normalizeUtterance(utterance);
   if (!n) return result;
 
   const wantsGoto =
-    /\b(accompagnami|portami|voglio andare|vorrei andare)\b/.test(n) ||
-    (/\b(vai|andiamo)\b/.test(n) &&
-      /\b(a|al|alla|in|nel|nella)\b/.test(n) &&
+    /\b(accompagnami|portami|voglio andare|vorrei andare|take me|bring me|acompañame|acompaname|begleite|emmène|emmene)\b/.test(
+      n
+    ) ||
+    (/\b(vai|andiamo|go|vamos|geh|allons)\b/.test(n) &&
+      /\b(a|al|alla|in|nel|nella|to|zu|nach|à|au)\b/.test(n) &&
       n.split(/\s+/).length <= 8);
 
   if (wantsGoto && !modules.goTo) {
     return {
-      speak: MODULE_DISABLED_SPEAK,
+      speak: disabledSpeak,
       actions: [],
       source: result.source,
     };
@@ -279,12 +282,13 @@ export function enforceModuleAvailability(
     );
     const labelHit = n.includes(normalizeUtterance(MODULE_LABELS[mod.flag]));
     const openHit =
-      /\b(apri|aprire|mostra|voglio|vorrei)\b/.test(n) &&
-      (phraseHit || labelHit);
+      /\b(apri|aprire|mostra|voglio|vorrei|open|show|öffne|ouvre|abre)\b/.test(
+        n
+      ) && (phraseHit || labelHit);
     if (!phraseHit && !openHit) continue;
     if (modules[mod.flag]) continue;
     return {
-      speak: MODULE_DISABLED_SPEAK,
+      speak: disabledSpeak,
       actions: [],
       source: result.source,
     };
@@ -294,7 +298,6 @@ export function enforceModuleAvailability(
   // se non restano azioni utili e il testo parlava di un modulo spento, già gestito sopra.
   return result;
 }
-
 
 export function parseVoiceAiJson(
   raw: string
@@ -399,8 +402,12 @@ export function sanitizeVoiceResult(
   };
 }
 
-/** Aggiunge «?» se la frase è una domanda senza punto interrogativo. */
+/** Aggiunge «?» se la frase è una domanda senza punto interrogativo (IT + EN/DE/FR/ES). */
 export function ensureItalianQuestionMark(speak: string): string {
+  return ensureSpeechQuestionMark(speak);
+}
+
+export function ensureSpeechQuestionMark(speak: string): string {
   const t = speak.trim();
   if (!t || /[?!…]$/.test(t)) return t;
 
@@ -411,31 +418,30 @@ export function ensureItalianQuestionMark(speak: string): string {
   // Togli filler iniziali: «Ciao, come stai» → «come stai»
   const stripped = last
     .replace(
-      /^(ciao|salve|buongiorno|buonasera|ok|okay|bene|certo|allora|quindi|dunque|e|ma|però|pero|senti|scusa|scusami|dimmi|guarda|ecco)[,!\s]+/i,
+      /^(ciao|salve|buongiorno|buonasera|hi|hello|hey|hallo|bonjour|hola|ok|okay|bene|certo|allora|quindi|dunque|e|ma|però|pero|senti|scusa|scusami|dimmi|guarda|ecco|well|so|alors|pues)[,!\s]+/i,
       ""
     )
     .trim();
 
   const questionLead =
-    /^(chi|che|cosa|come|dove|quando|perché|perche|quanto|quanti|quante|quale|quali|puoi|potresti|vuoi|vorresti|sai|sapresti|c'è|c’è|ce'|ci sono|posso|possiamo|mi (puoi|sai|dici|diresti|aiuti)|ti (va|piace|ricordi|chiami)|hai (già |un |una |degli |delle |appuntamento)|avete )\b/.test(
+    /^(chi|che|cosa|come|dove|quando|perché|perche|quanto|quanti|quante|quale|quali|puoi|potresti|vuoi|vorresti|sai|sapresti|c'è|c’è|ce'|ci sono|posso|possiamo|mi (puoi|sai|dici|diresti|aiuti)|ti (va|piace|ricordi|chiami)|hai (già |un |una |degli |delle |appuntamento)|avete |who|what|where|when|why|how|which|can|could|would|do|does|did|is|are|was|were|have|has|wer|was|wie|wo|wann|warum|können|kannst|möchten|qui|que|quoi|où|comment|quand|pourquoi|cuál|cual|qué|que|dónde|donde|cuándo|cuando|cómo|como|por qué|puedes|puede)\b/.test(
       stripped
     );
 
-  // Domanda con interrogativo in mezzo/fine: «In cosa posso aiutarti»
   const hasWh =
-    /\b(chi|che cosa|cosa|come|dove|quando|perché|perche|quale|quali|quanto|quanti|quante)\b/.test(
+    /\b(chi|che cosa|cosa|come|dove|quando|perché|perche|quale|quali|quanto|quanti|quante|who|what|where|when|why|how|which|wer|wie|wo|wann|warum|qui|que|quoi|où|comment|quand|pourquoi|quién|quien|qué|dónde|cuándo|cómo)\b/.test(
       last
     );
 
-  // Tag question: «va bene, vero»
-  const tagQ = /\b(vero|no|giusto|ok)\s*$/.test(last);
+  const tagQ = /\b(vero|no|giusto|ok|right|correct|nicht wahr|oui|n'est-ce pas|verdad)\s*$/.test(
+    last
+  );
 
   if (questionLead || (hasWh && last.length <= 160) || tagQ) {
     return `${t}?`;
   }
   return t;
 }
-
 export function openaiConfigured(): boolean {
   return Boolean(process.env.OPENAI_API_KEY?.trim());
 }

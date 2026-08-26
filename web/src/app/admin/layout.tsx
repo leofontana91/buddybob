@@ -35,13 +35,14 @@ export default async function AdminLayout({
           : session.name
       }
       roleLabel={
-        session.role === "SUPER_ADMIN" ? "Pannello cliente" : "Admin"
+        session.role === "SUPER_ADMIN" ? companyLabel : "Admin"
       }
       backToSuper={session.role === "SUPER_ADMIN"}
       links={[
-        { href: "/admin", label: "Dashboard" },
-        { href: "/admin/actions", label: "Azioni robot" },
-        { href: "/admin/users", label: "Utenti" },
+        { href: "/admin", label: "Oggi" },
+        { href: "/admin/agenda", label: "Agenda" },
+        { href: "/admin/rubrica", label: "Rubrica" },
+        { href: "/admin/robot", label: "Robot" },
         { href: "/admin/inbox", label: "Inbox", badgeKey: "inbox" },
       ]}
     >

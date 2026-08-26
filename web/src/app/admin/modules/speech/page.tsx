@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRobot } from "@/components/AdminShell";
+import { SPEECH_LANGUAGES } from "@/lib/speechLanguage";
 
 type Preview = {
   speak: string;
@@ -22,10 +23,12 @@ export default function SpeechModulePage() {
   const [aiConfigured, setAiConfigured] = useState(false);
   const [model, setModel] = useState("gpt-4o-mini");
   const [instructions, setInstructions] = useState("");
+  const [speechLanguage, setSpeechLanguage] = useState("it");
   const [text, setText] = useState("Apri appuntamenti");
   const [preview, setPreview] = useState<Preview | null>(null);
   const [msg, setMsg] = useState("");
   const [saved, setSaved] = useState(false);
+  const [langSaved, setLangSaved] = useState(false);
 
   const load = useCallback(async () => {
     const [vRes, sRes] = await Promise.all([
@@ -42,12 +45,33 @@ export default function SpeechModulePage() {
     if (sRes?.ok) {
       const data = await sRes.json();
       setInstructions(data.settings?.voiceInstructions ?? "");
+      setSpeechLanguage(data.settings?.speechLanguage ?? "it");
     }
   }, [robotId]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  async function saveLanguage(e: FormEvent) {
+    e.preventDefault();
+    if (!robotId) return;
+    setLangSaved(false);
+    setMsg("");
+    const res = await fetch("/api/admin/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        robotId,
+        speechLanguage,
+      }),
+    });
+    if (!res.ok) {
+      setMsg("Salvataggio lingua non riuscito");
+      return;
+    }
+    setLangSaved(true);
+  }
 
   async function saveInstructions(e: FormEvent) {
     e.preventDefault();
@@ -100,21 +124,51 @@ export default function SpeechModulePage() {
       <div>
         <h1 className="bob-page-title">Parla con me</h1>
         <p className="bob-page-sub">
-          Comandi vocali e istruzioni per l&apos;AI: sinonimi, cosa può dire e
-          cosa deve evitare.
+          Lingua del parlato e istruzioni per l&apos;AI. I menu sul monitor
+          restano in italiano; Bob parla e scrive nella lingua scelta.
         </p>
       </div>
+
+      <form onSubmit={saveLanguage} className="bob-card p-5 space-y-3">
+        <h2 className="font-semibold">Lingua parlato</h2>
+        <p className="text-sm text-[var(--bob-muted)]">
+          Accoglienza, risposte AI e testo «Ho detto» usano questa lingua. Dopo
+          il salvataggio il robot aggiorna la config al prossimo sync.
+        </p>
+        <select
+          className="w-full bob-input"
+          value={speechLanguage}
+          onChange={(e) => {
+            setSpeechLanguage(e.target.value);
+            setLangSaved(false);
+          }}
+        >
+          {SPEECH_LANGUAGES.map((l) => (
+            <option key={l.code} value={l.code}>
+              {l.label}
+            </option>
+          ))}
+        </select>
+        <div className="flex items-center gap-3">
+          <button type="submit" className="bob-btn px-5 py-2 font-medium">
+            Salva lingua
+          </button>
+          {langSaved ? (
+            <span className="text-sm text-[var(--bob-teal)]">Salvato.</span>
+          ) : null}
+        </div>
+      </form>
 
       <section className="bob-card p-5 space-y-2">
         <h2 className="font-semibold">Intelligenza</h2>
         {aiConfigured ? (
           <p className="text-sm">
             OpenAI collegata ({model}). I comandi naturali usano l&apos;AI più le
-            istruzioni qui sotto; senza AI restano le regole italiane di base.
+            istruzioni qui sotto; senza AI restano le regole di base.
           </p>
         ) : (
           <p className="text-sm text-[var(--bob-muted)]">
-            Nessuna chiave AI: funzionano solo le regole italiane. Su Vercel
+            Nessuna chiave AI: funzionano solo le regole di base. Su Vercel
             aggiungi{" "}
             <code className="text-[var(--bob-navy)]">OPENAI_API_KEY</code>.
           </p>
@@ -127,9 +181,8 @@ export default function SpeechModulePage() {
       >
         <h2 className="font-semibold">Istruzioni per l&apos;AI</h2>
         <p className="text-sm text-[var(--bob-muted)]">
-          Scrivi in italiano regole del tipo: «accompagnami = vai a», «non
-          rispondere sul meteo», «se chiedono X di&apos; Y». Non può inventare
-          punti mappa né aprire moduli non attivi.
+          Puoi scriverle in italiano: Bob risponde comunque nella lingua
+          parlato. Esempio: «accompagnami = vai a», «non rispondere sul meteo».
         </p>
         <textarea
           rows={8}
@@ -168,7 +221,8 @@ export default function SpeechModulePage() {
         <h2 className="font-semibold">Prova una frase</h2>
         <p className="text-sm text-[var(--bob-muted)]">
           Le prove consecutive tengono memoria del discorso (come sul robot). Usa
-          «Nuova conversazione» per azzerare.
+          «Nuova conversazione» per azzerare. La risposta segue la lingua parlato
+          salvata sopra.
         </p>
         <input
           className="w-full bob-input"
