@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { canAccessRobot, requireSession } from "@/lib/auth";
-import { resolveReadablePlaceMediaUrl } from "@/lib/supabaseStorageAdmin";
+import { placeMediaProxyUrl } from "@/lib/placeMediaProxy";
+import { downloadPlaceMediaObject } from "@/lib/supabaseStorageAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,7 +32,9 @@ export async function POST(req: Request) {
   }
 
   try {
-    const url = await resolveReadablePlaceMediaUrl(parsed.data.objectPath);
+    // Conferma che l'oggetto è davvero su Storage
+    await downloadPlaceMediaObject(parsed.data.objectPath);
+    const url = placeMediaProxyUrl(parsed.data.objectPath, req);
     return NextResponse.json({
       media: {
         path: parsed.data.objectPath,

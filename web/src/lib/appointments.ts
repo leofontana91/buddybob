@@ -15,6 +15,8 @@ import {
   detectLevelToAngleDeg,
   detectLevelToMeters,
 } from "./receptionSettings";
+import { placeMediaProxyUrl } from "./placeMediaProxy";
+import { objectPathFromPlaceMediaUrl } from "./supabaseStorageAdmin";
 
 export function parseHm(hm: string, day: Date): Date {
   const [h, m] = hm.split(":").map(Number);
@@ -137,8 +139,12 @@ export function buildRobotConfig(
     5,
     Math.max(1, s?.receptionDetectLevel ?? 3)
   );
-  const idleUrl = (s?.idleMediaUrl ?? "").trim();
+  const idleUrlRaw = (s?.idleMediaUrl ?? "").trim();
   const idleCt = (s?.idleMediaContentType ?? "").trim();
+  const idlePath =
+    objectPathFromPlaceMediaUrl(idleUrlRaw) ||
+    (idleUrlRaw.startsWith("place-media/") ? idleUrlRaw : "");
+  const idleUrl = idlePath ? placeMediaProxyUrl(idlePath) : idleUrlRaw;
   const idleMedia =
     idleUrl.length > 0
       ? { url: idleUrl, contentType: idleCt || "image/jpeg" }

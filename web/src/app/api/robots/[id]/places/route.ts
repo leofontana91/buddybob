@@ -8,10 +8,8 @@ import {
   resolvedFieldsForPlace,
 } from "@/lib/placeContentServer";
 import type { PlaceMedia } from "@/lib/placeContent";
-import {
-  createSignedPlaceMediaReadUrl,
-  objectPathFromPlaceMediaUrl,
-} from "@/lib/supabaseStorageAdmin";
+import { placeMediaProxyUrl } from "@/lib/placeMediaProxy";
+import { objectPathFromPlaceMediaUrl } from "@/lib/supabaseStorageAdmin";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -26,19 +24,19 @@ const bodySchema = z.object({
   ),
 });
 
-async function mediaForRobot(
-  media: PlaceMedia | null | undefined
-): Promise<PlaceMedia | null> {
+function mediaForRobot(
+  media: PlaceMedia | null | undefined,
+  req: Request
+): PlaceMedia | null {
   if (!media?.url?.trim()) return null;
   const path =
     media.path?.trim() || objectPathFromPlaceMediaUrl(media.url) || "";
   if (!path) return media;
-  try {
-    const url = await createSignedPlaceMediaReadUrl(path);
-    return { ...media, path, url };
-  } catch {
-    return media;
-  }
+  return {
+    ...media,
+    path,
+    url: placeMediaProxyUrl(path, req),
+  };
 }
 
 export async function GET(req: Request, ctx: Ctx) {
@@ -51,37 +49,28 @@ export async function GET(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { places, mode, shared, groupById } = await loadPlaceContentBundle(id);
-  const out = await Promise.all(
-    places.map(async (p) => {
-      const label = (p.label || p.name).trim();
-      const resolved = resolvedFieldsForPlace({
-        mode,
-        shared,
-        group: p.groupId ? groupById.get(p.groupId) ?? null : null,
-        own: ownContentFromRow(p),
-        label,
-      });
-      const [mediaOnDepart, mediaWhileMoving, mediaOnArrive] = await Promise.all(
-        [
-          mediaForRobot(resolved.mediaOnDepart),
-          mediaForRobot(resolved.mediaWhileMoving),
-          mediaForRobot(resolved.mediaOnArrive),
-        ]
-      );
-      return {
-        name: p.name,
-        label: p.label,
-        x: p.x,
-        y: p.y,
-        theta: p.theta,
-        waitSeconds: p.waitSeconds,
-        ...resolved,
-        mediaOnDepart,
-        mediaWhileMoving,
-        mediaOnArrive,
-      };
-    })
-  );
+  const out = places.map((p) => {
+    const label = (p.label || p.name).trim();
+    const resolved = resolvedFieldsForPlace({
+      mode,
+      shared,
+      group: p.groupId ? groupById.get(p.groupId) ?? null : null,
+      own: ownContentFromRow(p),
+      label,
+    });
+    return {
+      name: p.name,
+      label: p.label,
+      x: p.x,
+      y: p.y,
+      theta: p.theta,
+      waitSeconds: p.waitSeconds,
+      ...resolved,
+      mediaOnDepart: mediaForRobot(resolved.mediaOnDepart, req),
+      mediaWhileMoving: mediaForRobot(resolved.mediaWhileMoving, req),
+      mediaOnArrive: mediaForRobot(resolved.mediaOnArrive, req),
+    };
+  });
   return NextResponse.json({ places: out });
 }
 

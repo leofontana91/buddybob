@@ -56,6 +56,22 @@ function encodeObjectPath(objectPath: string): string {
     .join("/");
 }
 
+/**
+ * Supabase often returns relative paths like `/object/sign/...`.
+ * They must be under `/storage/v1`, not at the project root.
+ */
+export function absoluteStorageUrl(relativeOrAbsolute: string): string {
+  const raw = relativeOrAbsolute.trim();
+  if (!raw) throw new Error("Empty Storage URL");
+  if (/^https?:\/\//i.test(raw)) return raw;
+  const base = supabaseUrl().replace(/\/$/, "");
+  if (raw.startsWith("/storage/v1/")) return `${base}${raw}`;
+  if (raw.startsWith("storage/v1/")) return `${base}/${raw}`;
+  if (raw.startsWith("/object/")) return `${base}/storage/v1${raw}`;
+  if (raw.startsWith("object/")) return `${base}/storage/v1/${raw}`;
+  return `${base}/storage/v1/${raw.replace(/^\//, "")}`;
+}
+
 export async function createSignedApkUrl(params: {
   objectPath: string;
   expiresInSeconds?: number;
@@ -90,12 +106,7 @@ export async function createSignedApkUrl(params: {
   if (!data.signedURL) {
     throw new Error("Supabase Storage signed URL missing in response");
   }
-  const signed = data.signedURL;
-  if (signed.startsWith("http://") || signed.startsWith("https://")) {
-    return signed;
-  }
-  const base = supabaseUrl().replace(/\/$/, "");
-  return signed.startsWith("/") ? `${base}${signed}` : `${base}/${signed}`;
+  return absoluteStorageUrl(data.signedURL);
 }
 
 export async function ensureAndroidApkBucket(): Promise<void> {
@@ -185,10 +196,10 @@ export async function createSignedUploadUrl(params: {
     throw new Error("Supabase signed upload token missing");
   }
   const relative = data.url || data.signedURL || "";
-  const base = supabaseUrl().replace(/\/$/, "");
-  const uploadUrl = relative.startsWith("http")
-    ? relative
-    : `${base}${relative.startsWith("/") ? "" : "/"}${relative}`;
+  const uploadUrl = absoluteStorageUrl(
+    relative ||
+      `/object/upload/sign/${encodeObjectPath(androidApkBucket())}/${encodeObjectPath(objectPath)}`
+  );
   return {
     uploadUrl,
     token,
@@ -209,15 +220,26 @@ export function publicPlaceMediaUrl(objectPath: string): string {
   );
 }
 
-/** Estrae il path oggetto da un URL pubblico (o signed) place-media. */
+/** Estrae il path oggetto da un URL pubblico, signed o proxy buddybob. */
 export function objectPathFromPlaceMediaUrl(url: string): string | null {
   const u = url.trim();
   if (!u) return null;
+  try {
+    const parsed = new URL(u);
+    if (parsed.pathname.includes("/api/media/place")) {
+      const p = parsed.searchParams.get("path")?.trim();
+      if (p?.startsWith("place-media/")) return p;
+    }
+  } catch {
+    /* not absolute */
+  }
   const bucket = placeMediaBucket();
   const markers = [
     `/storage/v1/object/public/${bucket}/`,
     `/storage/v1/object/sign/${bucket}/`,
     `/storage/v1/object/${bucket}/`,
+    `/object/public/${bucket}/`,
+    `/object/sign/${bucket}/`,
   ];
   for (const m of markers) {
     const i = u.indexOf(m);
@@ -342,10 +364,7 @@ export async function createSignedPlaceMediaReadUrl(
   };
   const relative = data.signedURL || data.signedUrl || data.url || "";
   if (!relative) throw new Error("Supabase signed read URL missing");
-  const base = supabaseUrl().replace(/\/$/, "");
-  return relative.startsWith("http")
-    ? relative
-    : `${base}${relative.startsWith("/") ? "" : "/"}${relative}`;
+  return absoluteStorageUrl(relative);
 }
 
 /**
@@ -411,10 +430,10 @@ export async function createSignedPlaceMediaUploadUrl(params: {
     throw new Error("Supabase signed upload token missing");
   }
   const relative = data.url || data.signedURL || "";
-  const base = supabaseUrl().replace(/\/$/, "");
-  const uploadUrl = relative.startsWith("http")
-    ? relative
-    : `${base}${relative.startsWith("/") ? "" : "/"}${relative}`;
+  const uploadUrl = absoluteStorageUrl(
+    relative ||
+      `/object/upload/sign/${encodeObjectPath(placeMediaBucket())}/${encodeObjectPath(objectPath)}`
+  );
   return {
     uploadUrl,
     token,
