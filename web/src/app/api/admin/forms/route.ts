@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 const createSchema = z.object({
   robotId: z.string().min(1),
   name: z.string().min(1).max(80),
+  notifyEmail: z.union([z.literal(""), z.string().email()]).optional(),
 });
 
 export async function GET(req: Request) {
@@ -31,6 +32,7 @@ export async function GET(req: Request) {
       id: f.id,
       name: f.name,
       enabled: f.enabled,
+      notifyEmail: f.notifyEmail ?? "",
       fieldCount: f._count.fields,
       submissionCount: f._count.submissions,
       createdAt: f.createdAt.toISOString(),
@@ -45,7 +47,10 @@ export async function POST(req: Request) {
   }
   const parsed = createSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
-    return NextResponse.json({ error: "Nome modulo richiesto" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Nome modulo richiesto (email non valida?)" },
+      { status: 400 }
+    );
   }
   if (!(await canAccessRobot(session, parsed.data.robotId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -55,7 +60,13 @@ export async function POST(req: Request) {
     data: {
       robotId: parsed.data.robotId,
       name: parsed.data.name.trim(),
+      notifyEmail: (parsed.data.notifyEmail ?? "").trim(),
     },
   });
-  return NextResponse.json({ id: form.id, name: form.name, enabled: form.enabled });
+  return NextResponse.json({
+    id: form.id,
+    name: form.name,
+    enabled: form.enabled,
+    notifyEmail: form.notifyEmail,
+  });
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authenticateRobotRequest } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { sendFormSubmissionEmail } from "@/lib/mail";
 
 type Ctx = { params: Promise<{ id: string; formId: string }> };
 
@@ -57,6 +58,21 @@ export async function POST(req: Request, ctx: Ctx) {
       guestName: parsed.data.guestName?.trim() || null,
     },
   });
+
+  const notifyEmail = (form.notifyEmail ?? "").trim();
+  if (notifyEmail) {
+    const mail = await sendFormSubmissionEmail({
+      to: notifyEmail,
+      formName: form.name,
+      robotName: robot.displayName || robot.id,
+      guestName: submission.guestName,
+      answers: packed.map((a) => ({ label: a.label, value: a.value })),
+      submittedAt: submission.createdAt,
+    });
+    if (!mail.sent) {
+      console.warn("Form email not sent:", mail.mailError);
+    }
+  }
 
   return NextResponse.json({
     id: submission.id,

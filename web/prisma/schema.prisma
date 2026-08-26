@@ -252,6 +252,8 @@ model FormTemplate {
   robot       Robot            @relation(fields: [robotId], references: [id], onDelete: Cascade)
   name        String
   enabled     Boolean          @default(true)
+  /// Email dove inviare ogni compilazione (opzionale)
+  notifyEmail String           @default("")
   createdAt   DateTime         @default(now())
   fields      FormField[]
   submissions FormSubmission[]

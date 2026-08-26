@@ -15,6 +15,7 @@ const fieldSchema = z.object({
 const patchSchema = z.object({
   name: z.string().min(1).max(80).optional(),
   enabled: z.boolean().optional(),
+  notifyEmail: z.union([z.literal(""), z.string().email()]).optional(),
   fields: z.array(fieldSchema).optional(),
 });
 
@@ -43,6 +44,7 @@ export async function GET(_req: Request, ctx: Ctx) {
     robotId: form.robotId,
     name: form.name,
     enabled: form.enabled,
+    notifyEmail: form.notifyEmail ?? "",
     fields: form.fields.map((f) => ({
       id: f.id,
       label: f.label,
@@ -84,6 +86,10 @@ export async function PATCH(req: Request, ctx: Ctx) {
       data: {
         name: parsed.data.name?.trim(),
         enabled: parsed.data.enabled,
+        notifyEmail:
+          parsed.data.notifyEmail !== undefined
+            ? parsed.data.notifyEmail.trim()
+            : undefined,
       },
     });
     if (parsed.data.fields) {
@@ -110,6 +116,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     id: updated!.id,
     name: updated!.name,
     enabled: updated!.enabled,
+    notifyEmail: updated!.notifyEmail ?? "",
     fields: updated!.fields,
   });
 }

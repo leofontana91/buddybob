@@ -120,3 +120,41 @@ export async function sendPasswordResetEmail(opts: {
   const result = await sendResendEmail({ to: opts.to, subject, text });
   return { ...result, resetUrl };
 }
+
+export async function sendFormSubmissionEmail(opts: {
+  to: string;
+  formName: string;
+  robotName: string;
+  guestName?: string | null;
+  answers: { label: string; value: string }[];
+  submittedAt: Date;
+}): Promise<{ sent: boolean; mailError?: string }> {
+  const to = opts.to.trim();
+  if (!to || !to.includes("@")) {
+    return { sent: false, mailError: "Email destinazione non valida" };
+  }
+  const when = opts.submittedAt.toLocaleString("it-IT", {
+    timeZone: "Europe/Rome",
+  });
+  const lines = opts.answers.map(
+    (a) => `• ${a.label}: ${a.value || "(vuoto)"}`
+  );
+  const subject = `Modulo compilato: ${opts.formName}`;
+  const text = [
+    `Nuova compilazione del modulo «${opts.formName}».`,
+    "",
+    `Robot: ${opts.robotName}`,
+    `Data: ${when}`,
+    opts.guestName?.trim() ? `Ospite: ${opts.guestName.trim()}` : null,
+    "",
+    "Risposte:",
+    ...lines,
+    "",
+    "— BOB Robotics",
+    "(La compilazione è anche salvata in Documenti → Modulo → Compilazioni.)",
+  ]
+    .filter((x) => x !== null)
+    .join("\n");
+
+  return sendResendEmail({ to, subject, text });
+}

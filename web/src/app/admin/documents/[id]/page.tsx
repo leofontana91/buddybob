@@ -31,6 +31,7 @@ export default function DocumentEditorPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [enabled, setEnabled] = useState(true);
+  const [notifyEmail, setNotifyEmail] = useState("");
   const [fields, setFields] = useState<Field[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [msg, setMsg] = useState("");
@@ -46,6 +47,7 @@ export default function DocumentEditorPage() {
     const data = await res.json();
     setName(data.name ?? "");
     setEnabled(!!data.enabled);
+    setNotifyEmail(data.notifyEmail ?? "");
     setFields(
       (data.fields ?? []).map((f: Field) => ({
         label: f.label,
@@ -77,6 +79,7 @@ export default function DocumentEditorPage() {
       body: JSON.stringify({
         name,
         enabled,
+        notifyEmail: notifyEmail.trim(),
         fields: fields.filter((f) => f.label.trim()),
       }),
     });
@@ -85,7 +88,11 @@ export default function DocumentEditorPage() {
       setMsg(data.error ?? "Salvataggio non riuscito");
       return;
     }
-    setMsg("Salvato. Il modulo è visibile sul robot se è abilitato.");
+    setMsg(
+      notifyEmail.trim()
+        ? "Salvato. Le compilazioni restano in questa pagina e partono anche via email."
+        : "Salvato. Le compilazioni restano in questa pagina (nessuna email impostata)."
+    );
     await load();
   }
 
@@ -130,6 +137,21 @@ export default function DocumentEditorPage() {
             onChange={(e) => setEnabled(e.target.checked)}
           />
           Visibile sul robot
+        </label>
+        <label className="text-sm block">
+          Email dove inviare le compilazioni
+          <input
+            type="email"
+            className="mt-1 w-full bob-input"
+            placeholder="es. reception@azienda.it (lascia vuoto per non inviare)"
+            value={notifyEmail}
+            onChange={(e) => setNotifyEmail(e.target.value)}
+          />
+          <span className="mt-1 block text-xs text-[var(--bob-muted)]">
+            Ogni volta che qualcuno completa il modulo sul robot, le risposte
+            arrivano a questa email. Restano comunque salvate sotto in
+            «Compilazioni».
+          </span>
         </label>
 
         <div className="flex items-center justify-between pt-2">
@@ -233,7 +255,13 @@ export default function DocumentEditorPage() {
       </form>
 
       <section>
-        <h2 className="font-semibold text-lg mb-3">Compilazioni</h2>
+        <h2 className="font-semibold text-lg mb-1">Compilazioni salvate</h2>
+        <p className="text-sm text-[var(--bob-muted)] mb-3">
+          Qui trovi tutte le risposte registrate sul database della piattaforma.
+          {notifyEmail.trim()
+            ? ` Copia anche inviata a ${notifyEmail.trim()}.`
+            : " Imposta un’email sopra per riceverle anche via messaggio."}
+        </p>
         <ul className="space-y-3">
           {submissions.length === 0 ? (
             <li className="text-[var(--bob-muted)]">Nessuna compilazione ancora.</li>

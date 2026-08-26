@@ -8,6 +8,7 @@ type FormRow = {
   id: string;
   name: string;
   enabled: boolean;
+  notifyEmail?: string;
   fieldCount: number;
   submissionCount: number;
 };
@@ -16,6 +17,7 @@ export default function DocumentsPage() {
   const { robotId } = useRobot();
   const [forms, setForms] = useState<FormRow[]>([]);
   const [name, setName] = useState("");
+  const [notifyEmail, setNotifyEmail] = useState("");
   const [msg, setMsg] = useState("");
 
   const load = useCallback(async () => {
@@ -36,7 +38,11 @@ export default function DocumentsPage() {
     const res = await fetch("/api/admin/forms", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ robotId, name }),
+      body: JSON.stringify({
+        robotId,
+        name,
+        notifyEmail: notifyEmail.trim(),
+      }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -44,6 +50,7 @@ export default function DocumentsPage() {
       return;
     }
     setName("");
+    setNotifyEmail("");
     window.location.href = `/admin/documents/${data.id}`;
   }
 
@@ -59,8 +66,9 @@ export default function DocumentsPage() {
     <div>
       <h1 className="bob-page-title">Documenti</h1>
       <p className="text-[var(--bob-muted)] mt-1">
-        Crea moduli con domande. Compariranno sul robot in Documenti, da far
-        compilare al cliente.
+        Crea moduli con domande. Compariscono sul robot in Documenti. Le
+        compilazioni restano salvate qui sotto ogni modulo e, se impostata,
+        vengono inviate anche via email.
       </p>
 
       <form
@@ -75,6 +83,16 @@ export default function DocumentsPage() {
             placeholder="es. Registrazione ospite"
             value={name}
             onChange={(e) => setName(e.target.value)}
+          />
+        </label>
+        <label className="text-sm grow min-w-[220px]">
+          Email destinazione (opzionale)
+          <input
+            type="email"
+            className="mt-1 w-full bob-input"
+            placeholder="es. reception@azienda.it"
+            value={notifyEmail}
+            onChange={(e) => setNotifyEmail(e.target.value)}
           />
         </label>
         <button type="submit" className="bob-btn px-5 py-2.5 font-medium">
@@ -97,6 +115,7 @@ export default function DocumentsPage() {
                 <p className="text-sm text-[var(--bob-muted)]">
                   {f.fieldCount} domande · {f.submissionCount} compilazioni
                   {f.enabled ? "" : " · nascosto sul robot"}
+                  {f.notifyEmail ? ` · email: ${f.notifyEmail}` : ""}
                 </p>
               </div>
               <Link
