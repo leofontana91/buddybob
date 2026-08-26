@@ -209,6 +209,42 @@ export function publicPlaceMediaUrl(objectPath: string): string {
   );
 }
 
+/**
+ * Scarica un oggetto Storage con la service role (funziona anche se il bucket
+ * non è pubblico — evita 404 su /object/public/... dopo l'upload).
+ */
+export async function downloadPlaceMediaObject(
+  objectPath: string
+): Promise<Buffer> {
+  const url =
+    `${supabaseUrl()}/storage/v1/object/` +
+    `${encodeObjectPath(placeMediaBucket())}/` +
+    `${encodeObjectPath(objectPath)}`;
+
+  let lastStatus = 0;
+  let lastBody = "";
+  for (let attempt = 0; attempt < 4; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, 400 * attempt));
+    }
+    const resp = await fetch(url, {
+      headers: {
+        apikey: supabaseServiceRoleKey(),
+        Authorization: `Bearer ${supabaseServiceRoleKey()}`,
+      },
+    });
+    if (resp.ok) {
+      return Buffer.from(await resp.arrayBuffer());
+    }
+    lastStatus = resp.status;
+    lastBody = await resp.text().catch(() => "");
+    if (resp.status !== 404 && resp.status !== 400) break;
+  }
+  throw new Error(
+    `Storage download HTTP ${lastStatus}: ${lastBody.slice(0, 200)}`
+  );
+}
+
 export async function ensurePlaceMediaBucket(): Promise<void> {
   const bucket = placeMediaBucket();
   const resp = await fetch(`${supabaseUrl()}/storage/v1/bucket`, {

@@ -11,6 +11,10 @@ import {
 import { prisma } from "./db";
 import { parseModules, AdminModules, DEFAULT_ADMIN_MODULES } from "./modules";
 import { rewriteStaleAppUrl, publicAppUrl } from "./appUrl";
+import {
+  detectLevelToAngleDeg,
+  detectLevelToMeters,
+} from "./receptionSettings";
 
 export function parseHm(hm: string, day: Date): Date {
   const [h, m] = hm.split(":").map(Number);
@@ -87,6 +91,16 @@ export function buildRobotConfig(
       checkInSpeak: string;
       callOperatorSpeak: string;
       settingsPin?: string;
+      welcomeSpeak?: string;
+      howCanIHelpSpeak?: string;
+      receptionCooldownSec?: number;
+      receptionDetectLevel?: number;
+      standbyPlace?: string;
+      idleDisplayText?: string;
+      idleMediaUrl?: string;
+      idleMediaContentType?: string;
+      idleMediaIntervalSec?: number;
+      idleMediaStopMode?: string;
     } | null;
   },
   adminModules?: AdminModules
@@ -119,6 +133,17 @@ export function buildRobotConfig(
     settings: m.settings,
   };
 
+  const detectLevel = Math.min(
+    5,
+    Math.max(1, s?.receptionDetectLevel ?? 3)
+  );
+  const idleUrl = (s?.idleMediaUrl ?? "").trim();
+  const idleCt = (s?.idleMediaContentType ?? "").trim();
+  const idleMedia =
+    idleUrl.length > 0
+      ? { url: idleUrl, contentType: idleCt || "image/jpeg" }
+      : null;
+
   return {
     schemaVersion: 1,
     configVersion: configVersionOf({
@@ -126,6 +151,15 @@ export function buildRobotConfig(
       receptionButtons,
       bookingUrl,
       settingsPin: s?.settingsPin ?? "1234",
+      welcomeSpeak: s?.welcomeSpeak,
+      howCanIHelpSpeak: s?.howCanIHelpSpeak,
+      receptionCooldownSec: s?.receptionCooldownSec,
+      receptionDetectLevel: detectLevel,
+      standbyPlace: s?.standbyPlace,
+      idleDisplayText: s?.idleDisplayText,
+      idleMediaUrl: idleUrl,
+      idleMediaIntervalSec: s?.idleMediaIntervalSec,
+      idleMediaStopMode: s?.idleMediaStopMode,
     }),
     updatedAt: new Date().toISOString(),
     robot: {
@@ -136,8 +170,8 @@ export function buildRobotConfig(
     },
     modules,
     phrases: {
-      welcome: "Benvenuto",
-      howCanIHelp: "Come posso aiutarti?",
+      welcome: (s?.welcomeSpeak ?? "").trim() || "Benvenuto",
+      howCanIHelp: (s?.howCanIHelpSpeak ?? "").trim() || "Come posso aiutarti?",
       goingTo: "Vado a {place}",
       arrived: "Siamo arrivati a {place}",
       navigationFailed: "Non riesco ad arrivare a {place}",
@@ -147,6 +181,9 @@ export function buildRobotConfig(
       goodbye: "A presto!",
       configUpdated: "Configurazione aggiornata",
       configUpdateFailed: "Aggiornamento configurazione non riuscito",
+    },
+    assets: {
+      idleScreen: idleMedia,
     },
     appointments: {
       bookingMode: (s?.bookingMode === "in_app" ? "in_app" : "qr") as
@@ -160,11 +197,21 @@ export function buildRobotConfig(
       apiKey: robot.apiKey,
     },
     reception: {
-      cooldownSec: 45,
-      maxDistanceMeters: 3,
+      cooldownSec: Math.min(600, Math.max(10, s?.receptionCooldownSec ?? 45)),
+      maxDistanceMeters: detectLevelToMeters(detectLevel),
+      detectAngleDeg: detectLevelToAngleDeg(detectLevel),
+      detectLevel,
       raiseHeadVertical: 35,
       settingsPin: s?.settingsPin?.trim() || "1234",
-      standbyPlace: "",
+      standbyPlace: (s?.standbyPlace ?? "").trim(),
+      idleDisplayText: (s?.idleDisplayText ?? "").trim(),
+      idleMedia,
+      idleMediaIntervalSec: Math.min(
+        600,
+        Math.max(0, s?.idleMediaIntervalSec ?? 20)
+      ),
+      idleMediaStopMode:
+        s?.idleMediaStopMode === "tap" ? "tap" : "person",
       buttons: receptionButtons,
     },
     sync: {

@@ -205,22 +205,96 @@ export function voiceCatalog(args: {
   places: VoicePlace[];
   modules: AdminModules;
 }) {
-  const modules = enabledOpenModules(args.modules).map((m) => ({
+  const enabled = enabledOpenModules(args.modules).map((m) => ({
     id: m.id,
     label: MODULE_LABELS[m.flag],
+    enabled: true as const,
   }));
   if (args.modules.appointments) {
-    modules.push({
+    enabled.push({
       id: "appointmentsToday",
       label: "Check-in appuntamento di oggi (lista nomi)",
+      enabled: true,
+    });
+  }
+  const disabled = OPEN_MODULES.filter((m) => !args.modules[m.flag]).map(
+    (m) => ({
+      id: m.id,
+      label: MODULE_LABELS[m.flag],
+      enabled: false as const,
+    })
+  );
+  if (!args.modules.goTo) {
+    disabled.push({
+      id: "goTo",
+      label: MODULE_LABELS.goTo,
+      enabled: false,
     });
   }
   const places = placesForVoiceAi(args.places).map((p) => ({
     name: p.name,
     label: p.label || p.name,
   }));
-  return { modules, places, goToEnabled: !!args.modules.goTo };
+  return {
+    modules: enabled,
+    modulesDisabled: disabled,
+    places,
+    goToEnabled: !!args.modules.goTo,
+  };
 }
+
+/** Frase fissa se il modulo richiesto è spento. */
+export const MODULE_DISABLED_SPEAK =
+  "Non sono abilitato a fare questa operazione.";
+
+/**
+ * Se l'ospite chiede un modulo disabilitato → rifiuto chiaro, niente azioni.
+ * Va chiamato dopo sanitizeVoiceResult.
+ */
+export function enforceModuleAvailability(
+  result: VoiceResult,
+  utterance: string,
+  modules: AdminModules
+): VoiceResult {
+  const n = normalizeUtterance(utterance);
+  if (!n) return result;
+
+  const wantsGoto =
+    /\b(accompagnami|portami|voglio andare|vorrei andare)\b/.test(n) ||
+    (/\b(vai|andiamo)\b/.test(n) &&
+      /\b(a|al|alla|in|nel|nella)\b/.test(n) &&
+      n.split(/\s+/).length <= 8);
+
+  if (wantsGoto && !modules.goTo) {
+    return {
+      speak: MODULE_DISABLED_SPEAK,
+      actions: [],
+      source: result.source,
+    };
+  }
+
+  for (const mod of OPEN_MODULES) {
+    const phraseHit = mod.phrases.some((p) =>
+      n.includes(normalizeUtterance(p))
+    );
+    const labelHit = n.includes(normalizeUtterance(MODULE_LABELS[mod.flag]));
+    const openHit =
+      /\b(apri|aprire|mostra|voglio|vorrei)\b/.test(n) &&
+      (phraseHit || labelHit);
+    if (!phraseHit && !openHit) continue;
+    if (modules[mod.flag]) continue;
+    return {
+      speak: MODULE_DISABLED_SPEAK,
+      actions: [],
+      source: result.source,
+    };
+  }
+
+  // AI ha chiesto open su modulo non permesso (già tolto da sanitize):
+  // se non restano azioni utili e il testo parlava di un modulo spento, già gestito sopra.
+  return result;
+}
+
 
 export function parseVoiceAiJson(
   raw: string
@@ -325,16 +399,41 @@ export function sanitizeVoiceResult(
   };
 }
 
-/** Aggiunge «?» se la frase è chiaramente una domanda senza punto. */
+/** Aggiunge «?» se la frase è una domanda senza punto interrogativo. */
 export function ensureItalianQuestionMark(speak: string): string {
   const t = speak.trim();
   if (!t || /[?!…]$/.test(t)) return t;
-  const lower = t.toLowerCase();
-  const starts =
-    /^(chi|che|cosa|come|dove|quando|perché|perche|quanto|quale|quali|puoi|potresti|vuoi|vorresti|sai|mi (puoi|sai|dici)|hai |c'?è |ci sono|posso|possiamo)\b/.test(
-      lower
+
+  // Ultima frase (dopo . ! ;)
+  const lastRaw = (t.split(/(?<=[.!;])\s+/).pop() ?? t).trim();
+  const last = lastRaw.toLowerCase();
+
+  // Togli filler iniziali: «Ciao, come stai» → «come stai»
+  const stripped = last
+    .replace(
+      /^(ciao|salve|buongiorno|buonasera|ok|okay|bene|certo|allora|quindi|dunque|e|ma|però|pero|senti|scusa|scusami|dimmi|guarda|ecco)[,!\s]+/i,
+      ""
+    )
+    .trim();
+
+  const questionLead =
+    /^(chi|che|cosa|come|dove|quando|perché|perche|quanto|quanti|quante|quale|quali|puoi|potresti|vuoi|vorresti|sai|sapresti|c'è|c’è|ce'|ci sono|posso|possiamo|mi (puoi|sai|dici|diresti|aiuti)|ti (va|piace|ricordi|chiami)|hai (già |un |una |degli |delle |appuntamento)|avete )\b/.test(
+      stripped
     );
-  return starts ? `${t}?` : t;
+
+  // Domanda con interrogativo in mezzo/fine: «In cosa posso aiutarti»
+  const hasWh =
+    /\b(chi|che cosa|cosa|come|dove|quando|perché|perche|quale|quali|quanto|quanti|quante)\b/.test(
+      last
+    );
+
+  // Tag question: «va bene, vero»
+  const tagQ = /\b(vero|no|giusto|ok)\s*$/.test(last);
+
+  if (questionLead || (hasWh && last.length <= 160) || tagQ) {
+    return `${t}?`;
+  }
+  return t;
 }
 
 export function openaiConfigured(): boolean {

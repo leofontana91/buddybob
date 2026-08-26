@@ -24,6 +24,21 @@ export async function GET(req: Request) {
   const lastSeen = robot.lastSeenAt?.getTime() ?? 0;
   const online = lastSeen > 0 && Date.now() - lastSeen < 20_000;
 
+  // Se lastPlace è un nome tecnico, preferisci l'etichetta mappa
+  let lastPlace = robot.lastPlace;
+  if (lastPlace) {
+    const mapped = await prisma.mapPlace.findFirst({
+      where: {
+        robotId,
+        OR: [{ name: lastPlace }, { label: lastPlace }],
+      },
+      select: { name: true, label: true },
+    });
+    if (mapped) {
+      lastPlace = mapped.label?.trim() || mapped.name;
+    }
+  }
+
   const today = format(new Date(), "yyyy-MM-dd");
   const dayStart = new Date(`${today}T00:00:00`);
   const dayEnd = new Date(`${today}T23:59:59`);
@@ -42,7 +57,7 @@ export async function GET(req: Request) {
     displayName: robot.displayName,
     online,
     lastSeenAt: robot.lastSeenAt?.toISOString() ?? null,
-    lastPlace: robot.lastPlace,
+    lastPlace,
     lastActivity: robot.lastActivity,
     waiting: waiting.map((a) => ({
       id: a.id,

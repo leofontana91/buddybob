@@ -2,7 +2,9 @@ import {
   openaiConfigured,
   parseVoiceAiJson,
   sanitizeVoiceResult,
+  enforceModuleAvailability,
   voiceCatalog,
+  MODULE_DISABLED_SPEAK,
   type VoicePlace,
   type VoiceResult,
 } from "./voiceIntent";
@@ -29,9 +31,14 @@ export async function resolveVoiceWithAi(args: {
   const model = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
   const key = process.env.OPENAI_API_KEY!.trim();
   const custom = (args.instructions ?? "").trim().slice(0, 4000);
-  // Solo ultimi 3 scambi → meno token, risposta più veloce
   const history = (args.history ?? []).slice(-6);
   const nowIt = formatNowItaly();
+  const enabledIds =
+    catalog.modules.map((m) => m.id).join(", ") || "(nessuno)";
+  const disabledList =
+    catalog.modulesDisabled.length > 0
+      ? catalog.modulesDisabled.map((m) => `${m.id} (${m.label})`).join(", ")
+      : "(nessuno)";
 
   const system = `Sei BOB, receptionist robot (italiano). Aiuti con i moduli del robot E chiacchiere con l'ospite.
 
@@ -42,24 +49,27 @@ Ora e data correnti (Europa/Roma): ${nowIt}
 Usa questi valori per «che ore sono», «che giorno è», ecc. Non inventare un altro orario.
 
 Azioni ammesse (solo se serve un comando robot ora; altrimenti actions: []):
-- {"type":"open","module":"<id>"}  id tra: ${catalog.modules.map((m) => m.id).join(", ") || "(nessuno)"}
+- {"type":"open","module":"<id>"}  id SOLO tra moduli abilitati: ${enabledIds}
 - {"type":"goto","placeName":"<name>","after":"stay"}  solo se goToEnabled e placeName è nella lista places (campo name tecnico)
 - {"type":"stop"}
 - {"type":"menu"}
 - {"type":"speak","text":"..."}  raramente; preferisci "speak" top-level
 
+Moduli DISABILITATI (non puoi aprirli né usarli): ${disabledList}
+Se l'ospite chiede un modulo disabilitato (es. «apri memo vocali» ma voiceMemos è off): speak esattamente «${MODULE_DISABLED_SPEAK}» e actions []. Non inventare alternative.
+
 Regole fisse:
 - Usa la cronologia: riferimenti tipo «là», «quello», «ci puoi accompagnare» riguardano il contesto precedente.
-- Se l'ospite vuole registrare un audio/memo («registra questo audio», «registra un memo»): speak «Apro i memo vocali. Tocca Inizia a registrare quando sei pronto.» e actions [{"type":"open","module":"voiceMemos"}]. Non avviare la registrazione da solo.
-- Se l'ospite dice di avere un appuntamento (oggi / check-in / «sono in agenda»): speak chiedendo chi è (es. «Chi sei? Tocca il tuo nome sulla lista.») e actions [{"type":"open","module":"appointmentsToday"}]. Non aprire solo «appointments» in quel caso.
-- Per «apri appuntamenti» generico senza dire di averne uno: module «appointments».
-- Conversazione libera OK: ora, data, saluti, battute, indovinelli, storie brevi, curiosità, spiegazioni semplici, chiacchiere. Per queste: rispondi in speak e actions [].
-- Meteo/notizie in tempo reale: non hai dati live → dillo brevemente, non inventare. actions [].
-- goto SOLO se l'ospite chiede ESPLICITAMENTE di essere portato/accompagnato a un punto mappa (es. «accompagnami in reception», «portami alla sala»).
-- Se in una chiacchiera compare «vai», «andiamo», «vado» senza un chiaro comando di spostamento verso un punto in places: NON fare goto, continua la conversazione (actions []).
-- Non inventare punti mappa: solo quelli in places. Non usare punti con nome di 1 lettera a meno che l'ospite non li nomini chiaramente.
-- Non azioni fuori dai moduli elencati.
-- speak in italiano. Mai salutare in inglese (niente «Hi», «Hello», «Hey»).
+- Se l'ospite vuole registrare un audio/memo e voiceMemos è abilitato: speak «Apro i memo vocali. Tocca Inizia a registrare quando sei pronto.» e actions [{"type":"open","module":"voiceMemos"}]. Non avviare la registrazione da solo.
+- Se l'ospite dice di avere un appuntamento (oggi / check-in) e appointments è abilitato: speak chiedendo chi è e actions [{"type":"open","module":"appointmentsToday"}].
+- Per «apri appuntamenti» generico (se abilitato): module «appointments».
+- Conversazione libera OK: ora, data, saluti, battute, storie brevi, chiacchiere → speak e actions [].
+- Meteo/notizie live: non hai dati → dillo brevemente, actions [].
+- goto SOLO se goToEnabled e richiesta esplicita di accompagnamento a un punto in places.
+- In chiacchiere con «vai/andiamo» senza destinazione chiara: NON fare goto.
+- Non inventare punti mappa. Non azioni su moduli disabilitati.
+- speak in italiano. Mai salutare in inglese.
+- Se speak è una domanda (anche dopo un saluto, es. «Ciao, come stai»), termina SEMPRE con «?». Affermazioni senza «?».
 ${
   custom
     ? `
@@ -71,7 +81,8 @@ ${custom}
 
   const catalogBlock = JSON.stringify({
     goToEnabled: catalog.goToEnabled,
-    modules: catalog.modules,
+    modulesEnabled: catalog.modules,
+    modulesDisabled: catalog.modulesDisabled,
     places: catalog.places,
   });
 
@@ -125,9 +136,14 @@ ${custom}
       args.modules,
       args.text
     );
+    const gated = enforceModuleAvailability(
+      sanitized,
+      args.text,
+      args.modules
+    );
     return {
-      ...sanitized,
-      speak: sanitized.speak,
+      ...gated,
+      speak: gated.speak,
       newTopic: parsed.newTopic === true,
     };
   } catch (e) {

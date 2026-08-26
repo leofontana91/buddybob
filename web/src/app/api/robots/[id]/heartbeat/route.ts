@@ -27,8 +27,15 @@ export async function POST(req: Request, ctx: Ctx) {
     where: { id },
     data: {
       lastSeenAt: new Date(),
-      lastPlace: parsed.data.place || undefined,
-      lastActivity: parsed.data.activity || undefined,
+      // Sempre aggiorna: stringa vuota / assente → azzera (niente «a» stale)
+      lastPlace:
+        parsed.data.place === undefined
+          ? undefined
+          : parsed.data.place?.trim() || null,
+      lastActivity:
+        parsed.data.activity === undefined
+          ? undefined
+          : parsed.data.activity?.trim() || null,
     },
   });
   return NextResponse.json({ ok: true });

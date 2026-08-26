@@ -103,6 +103,24 @@ model RobotSettings {
   placeSharedJson   String @default("{}")
   /// Istruzioni custom per l'AI vocale (sinonimi, cosa può/non può rispondere)
   voiceInstructions String @default("")
+
+  /// Accoglienza: frase al rilevamento ospite
+  welcomeSpeak       String @default("Benvenuto")
+  howCanIHelpSpeak   String @default("Come posso aiutarti?")
+  /// Secondi di inattività fuori reception prima di tornare al menu/standby
+  receptionCooldownSec Int  @default(45)
+  /// Sensibilità rilevazione 1 (solo vicino) … 5 (anche lontano)
+  receptionDetectLevel Int  @default(3)
+  /// Punto mappa di accoglienza / ritorno
+  standbyPlace       String @default("")
+  /// Testo a schermo in idle (accoglienza senza ospite)
+  idleDisplayText    String @default("")
+  idleMediaUrl       String @default("")
+  idleMediaContentType String @default("")
+  /// Ogni quanti secondi ripresentare / ciclare i media in idle (0 = sempre)
+  idleMediaIntervalSec Int  @default(20)
+  /// person = si interrompe se vede qualcuno; tap = solo al tocco monitor
+  idleMediaStopMode  String @default("person")
 }
 
 model Appointment {

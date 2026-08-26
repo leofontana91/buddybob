@@ -5,6 +5,7 @@ import { modulesForRobot } from "@/lib/appointments";
 import { prisma } from "@/lib/db";
 import { resolveVoiceWithAi } from "@/lib/voiceAi";
 import {
+  ensureItalianQuestionMark,
   openaiConfigured,
   placesForVoiceAi,
   type VoicePlace,
@@ -110,10 +111,12 @@ export async function POST(req: Request) {
   if (fromAi?.newTopic) {
     clearVoiceHistory(parsed.data.robotId, sessionKey);
   }
-  appendVoiceTurn(parsed.data.robotId, sessionKey, text, result.speak);
+  const speak = ensureItalianQuestionMark(result.speak);
+  appendVoiceTurn(parsed.data.robotId, sessionKey, text, speak);
 
   return NextResponse.json({
     ...result,
+    speak,
     aiConfigured: true,
     memoryTurns: getVoiceHistory(parsed.data.robotId, sessionKey).filter(
       (m) => m.role === "user"

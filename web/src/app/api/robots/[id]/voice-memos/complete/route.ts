@@ -4,6 +4,7 @@ import { authenticateRobotRequest } from "@/lib/auth";
 import { modulesForRobot } from "@/lib/appointments";
 import { prisma } from "@/lib/db";
 import {
+  downloadPlaceMediaObject,
   publicVoiceMemoUrl,
 } from "@/lib/supabaseStorageAdmin";
 import { transcribeAudio } from "@/lib/voiceMemoTranscribe";
@@ -64,11 +65,7 @@ export async function POST(req: Request, ctx: Ctx) {
   });
 
   try {
-    const audioResp = await fetch(audioUrl);
-    if (!audioResp.ok) {
-      throw new Error(`Download audio HTTP ${audioResp.status}`);
-    }
-    const bytes = Buffer.from(await audioResp.arrayBuffer());
+    const bytes = await downloadPlaceMediaObject(objectPath);
     const transcript = await transcribeAudio({
       bytes,
       fileName: fileName || "memo.m4a",

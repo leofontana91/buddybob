@@ -48,6 +48,16 @@ const patchSchema = z.object({
   displayName: z.string().optional(),
   settingsPin: z.string().trim().min(4).max(20).optional(),
   voiceInstructions: z.string().max(4000).optional(),
+  welcomeSpeak: z.string().max(400).optional(),
+  howCanIHelpSpeak: z.string().max(400).optional(),
+  receptionCooldownSec: z.number().int().min(10).max(600).optional(),
+  receptionDetectLevel: z.number().int().min(1).max(5).optional(),
+  standbyPlace: z.string().max(120).optional(),
+  idleDisplayText: z.string().max(500).optional(),
+  idleMediaUrl: z.string().max(800).optional(),
+  idleMediaContentType: z.string().max(120).optional(),
+  idleMediaIntervalSec: z.number().int().min(0).max(600).optional(),
+  idleMediaStopMode: z.enum(["person", "tap"]).optional(),
 });
 
 export async function PATCH(req: Request) {
@@ -89,6 +99,16 @@ export async function PATCH(req: Request) {
       slotMinutes: settings.slotMinutes,
       settingsPin: settings.settingsPin,
       voiceInstructions: settings.voiceInstructions ?? "",
+      welcomeSpeak: settings.welcomeSpeak ?? "Benvenuto",
+      howCanIHelpSpeak: settings.howCanIHelpSpeak ?? "Come posso aiutarti?",
+      receptionCooldownSec: settings.receptionCooldownSec ?? 45,
+      receptionDetectLevel: settings.receptionDetectLevel ?? 3,
+      standbyPlace: settings.standbyPlace ?? "",
+      idleDisplayText: settings.idleDisplayText ?? "",
+      idleMediaUrl: settings.idleMediaUrl ?? "",
+      idleMediaContentType: settings.idleMediaContentType ?? "",
+      idleMediaIntervalSec: settings.idleMediaIntervalSec ?? 20,
+      idleMediaStopMode: settings.idleMediaStopMode ?? "person",
     },
   });
 
