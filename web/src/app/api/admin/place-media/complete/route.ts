@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { canAccessRobot, requireSession } from "@/lib/auth";
-import { publicPlaceMediaUrl } from "@/lib/supabaseStorageAdmin";
+import { resolveReadablePlaceMediaUrl } from "@/lib/supabaseStorageAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,12 +30,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Percorso non valido" }, { status: 400 });
   }
 
-  return NextResponse.json({
-    media: {
-      path: parsed.data.objectPath,
-      url: publicPlaceMediaUrl(parsed.data.objectPath),
-      contentType: parsed.data.contentType,
-      fileName: parsed.data.fileName,
-    },
-  });
+  try {
+    const url = await resolveReadablePlaceMediaUrl(parsed.data.objectPath);
+    return NextResponse.json({
+      media: {
+        path: parsed.data.objectPath,
+        url,
+        contentType: parsed.data.contentType,
+        fileName: parsed.data.fileName,
+      },
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Upload non verificabile";
+    return NextResponse.json(
+      {
+        error:
+          "File caricato ma non ancora leggibile. Riprova tra qualche secondo.",
+        details: msg,
+      },
+      { status: 502 }
+    );
+  }
 }

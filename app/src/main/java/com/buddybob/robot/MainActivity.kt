@@ -1,14 +1,17 @@
 package com.buddybob.robot
 
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -62,6 +65,7 @@ class MainActivity : AppCompatActivity() {
             applyImmersiveChrome()
             bindSystemStatus()
             bindDialogueStopButtons()
+            bindVoiceMuteButton()
             openReceptionOrHome()
         }, 700)
     }
@@ -72,6 +76,40 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<Button?>(R.id.btn_stop_speak)?.setOnClickListener(stop)
         findViewById<Button?>(R.id.btn_stop_moving)?.setOnClickListener(stop)
+    }
+
+    private val muteListener: (Boolean) -> Unit = { muted ->
+        applyVoiceMuteUi(muted)
+    }
+
+    private fun bindVoiceMuteButton() {
+        val btn = findViewById<ImageButton?>(R.id.btn_voice_mute) ?: return
+        btn.setOnClickListener {
+            BuddybobApp.instance.toggleVoiceMute()
+        }
+        BuddybobApp.instance.addVoiceMuteListener(muteListener)
+        refreshVoiceMuteVisibility()
+        applyVoiceMuteUi(BuddybobApp.instance.isVoiceMuted())
+    }
+
+    /** Mostra il mute solo se il modulo speech è attivo. */
+    fun refreshVoiceMuteVisibility() {
+        handler.post {
+            val btn = findViewById<ImageButton?>(R.id.btn_voice_mute) ?: return@post
+            val speechOn = BuddybobApp.instance.config.current.modules.speech
+            btn.visibility = if (speechOn) View.VISIBLE else View.GONE
+        }
+    }
+
+    private fun applyVoiceMuteUi(muted: Boolean) {
+        val btn = findViewById<ImageButton?>(R.id.btn_voice_mute) ?: return
+        btn.setBackgroundResource(
+            if (muted) R.drawable.bg_mic_mute else R.drawable.bg_mic_mute_off
+        )
+        btn.contentDescription = getString(
+            if (muted) R.string.voice_unmute_button else R.string.voice_mute_button
+        )
+        btn.alpha = if (muted) 1f else 0.92f
     }
 
     enum class StopPlacement { SPEAKING, MOVING }
@@ -221,7 +259,7 @@ class MainActivity : AppCompatActivity() {
             .commitAllowingStateLoss()
     }
 
-    /** Barra in basso: un solo testo (ascoltato), si aggiorna al posto. */
+    /** Barra in basso: testo ascoltato (si aggiorna). Resta finché non arriva la risposta o chiude la sessione. */
     fun showVoiceTranscript(text: String, final: Boolean) {
         handler.post {
             val bar = findViewById<LinearLayout?>(R.id.bar_voice_transcript) ?: return@post
@@ -231,11 +269,12 @@ class MainActivity : AppCompatActivity() {
             label?.setTextColor(getColor(R.color.bob_teal))
             body.text = ensureQuestionMark(text.trim())
             bar.visibility = View.VISIBLE
-            scheduleTranscriptHide(if (final) 5_000L else 8_000L)
+            // Niente auto-hide: sparisce solo a fine conversazione (serve di nuovo «Bob»)
+            cancelTranscriptHide()
         }
     }
 
-    /** Cosa sta dicendo BOB: sostituisce lo stesso spazio (non aggiunge una seconda riga). */
+    /** Risposta di BOB: resta visibile fino a chiusura conversazione. */
     fun showVoiceSaid(text: String) {
         handler.post {
             val bar = findViewById<LinearLayout?>(R.id.bar_voice_transcript) ?: return@post
@@ -247,38 +286,60 @@ class MainActivity : AppCompatActivity() {
             label?.setTextColor(getColor(R.color.bob_navy))
             body.text = trimmed
             bar.visibility = View.VISIBLE
-            val hideMs = (trimmed.length * 55L).coerceIn(4_000L, 10_000L)
-            scheduleTranscriptHide(hideMs)
+            cancelTranscriptHide()
+        }
+    }
+
+    /** Hint a schermo: serve la wake word («ehi Bob»). */
+    fun showVoiceWakeHint() {
+        handler.post {
+            val bar = findViewById<LinearLayout?>(R.id.bar_voice_transcript) ?: return@post
+            val label = findViewById<TextView?>(R.id.label_voice_heard)
+            val body = findViewById<TextView?>(R.id.text_voice_transcript) ?: return@post
+            label?.setText(R.string.voice_wake_hint_label)
+            label?.setTextColor(getColor(R.color.bob_navy))
+            body.setText(R.string.voice_wake_hint)
+            bar.visibility = View.VISIBLE
+            cancelTranscriptHide()
         }
     }
 
     fun hideVoiceTranscript() {
         handler.post {
-            transcriptHideRunnable?.let { handler.removeCallbacks(it) }
+            cancelTranscriptHide()
             findViewById<LinearLayout?>(R.id.bar_voice_transcript)?.visibility = View.GONE
         }
     }
 
-    private fun scheduleTranscriptHide(delayMs: Long) {
+    private fun cancelTranscriptHide() {
         transcriptHideRunnable?.let { handler.removeCallbacks(it) }
-        val hide = Runnable {
-            findViewById<LinearLayout?>(R.id.bar_voice_transcript)?.visibility = View.GONE
-        }
-        transcriptHideRunnable = hide
-        handler.postDelayed(hide, delayMs)
+        transcriptHideRunnable = null
     }
 
-    /** ASR / TTS spesso omettono «?»: aggiungilo sulle domande italiane ovvie. */
+    /** ASR / TTS spesso omettono «?»: aggiungilo sulle domande italiane. */
     private fun ensureQuestionMark(raw: String): String {
         val t = raw.trim()
-        if (t.isEmpty() || t.endsWith("?") || t.endsWith("！") || t.endsWith("…")) return t
-        val lower = t.lowercase()
-        val startsQuestion = Regex(
-            "^(chi|che|cosa|come|dove|quando|perché|perche|quanto|quale|quali|" +
-                "puoi|potresti|vuoi|vorresti|sai|mi (puoi|sai|dici)|" +
-                "hai |c'?è |ci sono|posso|possiamo)\\b"
-        ).containsMatchIn(lower)
-        return if (startsQuestion) "$t?" else t
+        if (t.isEmpty() || t.endsWith("?") || t.endsWith("!") || t.endsWith("…")) return t
+        val last = t.split(Regex("(?<=[.!;])\\s+")).lastOrNull()?.trim()?.lowercase() ?: t.lowercase()
+        val stripped = last.replace(
+            Regex(
+                "^(ciao|salve|buongiorno|buonasera|ok|okay|bene|certo|allora|quindi|dunque|" +
+                    "e|ma|però|pero|senti|scusa|scusami|dimmi|guarda|ecco)[,!\\s]+",
+                RegexOption.IGNORE_CASE
+            ),
+            ""
+        ).trim()
+        val questionLead = Regex(
+            "^(chi|che|cosa|come|dove|quando|perché|perche|quanto|quanti|quante|quale|quali|" +
+                "puoi|potresti|vuoi|vorresti|sai|sapresti|c'è|ci sono|" +
+                "posso|possiamo|mi (puoi|sai|dici|diresti|aiuti)|" +
+                "ti (va|piace|ricordi|chiami)|hai (già |un |una |degli |delle |appuntamento)|avete )\\b"
+        ).containsMatchIn(stripped)
+        val hasWh = Regex(
+            "\\b(chi|che cosa|cosa|come|dove|quando|perché|perche|quale|quali|quanto|quanti|quante)\\b"
+        ).containsMatchIn(last)
+        val tagQ = Regex("\\b(vero|no|giusto|ok)\\s*$").containsMatchIn(last)
+        return if (questionLead || (hasWh && last.length <= 160) || tagQ) "$t?" else t
     }
 
     /** Schermo pieno durante lo spostamento: media dal web oppure Bob che cammina. */
@@ -296,7 +357,9 @@ class MainActivity : AppCompatActivity() {
     fun showPlaceDisplay(
         text: String?,
         media: PlaceContentStore.Media?,
-        showBobIfNoMedia: Boolean = false
+        showBobIfNoMedia: Boolean = false,
+        showStopButton: Boolean = true,
+        onOverlayClick: (() -> Unit)? = null
     ) {
         handler.post {
             val overlay = findViewById<FrameLayout?>(R.id.overlay_place_media) ?: return@post
@@ -316,12 +379,22 @@ class MainActivity : AppCompatActivity() {
             val url = media?.url?.trim().orEmpty()
             val type = media?.contentType.orEmpty()
             if (!hasText && url.isBlank() && !showBobIfNoMedia) {
+                overlay.setOnClickListener(null)
                 overlay.visibility = View.GONE
                 return@post
             }
 
             overlay.visibility = View.VISIBLE
-            showDialogueStop(StopPlacement.MOVING)
+            if (onOverlayClick != null) {
+                overlay.setOnClickListener { onOverlayClick() }
+            } else {
+                overlay.setOnClickListener(null)
+            }
+            if (showStopButton) {
+                showDialogueStop(StopPlacement.MOVING)
+            } else {
+                findViewById<Button?>(R.id.btn_stop_moving)?.visibility = View.GONE
+            }
             if (hasText) {
                 caption.text = text
                 caption.visibility = View.VISIBLE
@@ -345,6 +418,16 @@ class MainActivity : AppCompatActivity() {
                 }
                 type.startsWith("video/") || url.endsWith(".mp4") || url.endsWith(".webm") -> {
                     video.visibility = View.VISIBLE
+                    video.setOnErrorListener { _, what, extra ->
+                        Log.w(TAG, "video load failed what=$what extra=$extra url=$url")
+                        video.visibility = View.GONE
+                        if (showBobIfNoMedia && bob != null) {
+                            bob.visibility = View.VISIBLE
+                            bob.bindSignals(BuddybobApp.instance.robot.avatar)
+                            bob.setMode(BobAvatarMode.MOVING)
+                        }
+                        true
+                    }
                     video.setVideoURI(Uri.parse(url))
                     video.setOnPreparedListener { mp ->
                         mp.isLooping = true
@@ -362,22 +445,19 @@ class MainActivity : AppCompatActivity() {
                     image.visibility = View.VISIBLE
                     image.scaleType = ImageView.ScaleType.CENTER_CROP
                     Thread {
-                        val bmp = runCatching {
-                            val req = Request.Builder().url(url).build()
-                            imageClient.newCall(req).execute().use { resp ->
-                                if (!resp.isSuccessful) return@use null
-                                resp.body?.byteStream()?.use { BitmapFactory.decodeStream(it) }
-                            }
-                        }.getOrNull()
+                        val bmp = loadRemoteBitmap(url)
                         handler.post {
                             if (bmp != null) {
                                 image.setImageBitmap(bmp)
                                 image.scaleType = ImageView.ScaleType.CENTER_CROP
-                            } else if (showBobIfNoMedia && bob != null) {
+                            } else {
+                                Log.w(TAG, "image load failed url=$url")
                                 image.visibility = View.GONE
-                                bob.visibility = View.VISIBLE
-                                bob.bindSignals(BuddybobApp.instance.robot.avatar)
-                                bob.setMode(BobAvatarMode.MOVING)
+                                if (showBobIfNoMedia && bob != null) {
+                                    bob.visibility = View.VISIBLE
+                                    bob.bindSignals(BuddybobApp.instance.robot.avatar)
+                                    bob.setMode(BobAvatarMode.MOVING)
+                                }
                             }
                         }
                     }.start()
@@ -386,10 +466,57 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Scarica e decodifica con downsample (foto grandi) + retry. */
+    private fun loadRemoteBitmap(url: String): Bitmap? {
+        repeat(3) { attempt ->
+            val bmp = runCatching {
+                val req = Request.Builder()
+                    .url(url)
+                    .header("Accept", "image/*,*/*")
+                    .get()
+                    .build()
+                imageClient.newCall(req).execute().use { resp ->
+                    if (!resp.isSuccessful) {
+                        Log.w(TAG, "image HTTP ${resp.code} attempt=$attempt")
+                        return@use null
+                    }
+                    val bytes = resp.body?.bytes() ?: return@use null
+                    if (bytes.isEmpty()) return@use null
+                    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+                    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+                        Log.w(TAG, "image decode bounds failed")
+                        return@use null
+                    }
+                    var sample = 1
+                    val maxSide = 1600
+                    while (
+                        bounds.outWidth / sample > maxSide ||
+                        bounds.outHeight / sample > maxSide
+                    ) {
+                        sample *= 2
+                    }
+                    val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)
+                }
+            }.onFailure {
+                Log.w(TAG, "image fetch error attempt=$attempt: ${it.message}")
+            }.getOrNull()
+            if (bmp != null) return bmp
+            try {
+                Thread.sleep(250L * (attempt + 1))
+            } catch (_: InterruptedException) {
+                return null
+            }
+        }
+        return null
+    }
+
     fun hidePlaceDisplay() {
         handler.post {
             val overlay = findViewById<FrameLayout?>(R.id.overlay_place_media) ?: return@post
             stopVideo()
+            overlay.setOnClickListener(null)
             findViewById<ImageView?>(R.id.overlay_place_image)?.setImageDrawable(null)
             findViewById<BobAvatarView?>(R.id.overlay_place_bob)?.let { bob ->
                 bob.unbindSignals()
@@ -434,6 +561,7 @@ class MainActivity : AppCompatActivity() {
     /** Menu moduli aggiornato dalla piattaforma. */
     fun onRemoteConfigUpdated() {
         handler.post {
+            refreshVoiceMuteVisibility()
             if (inSubFeature) return@post
             val visible = supportFragmentManager.fragments.firstOrNull { it.isVisible }
             when (visible) {
@@ -481,6 +609,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        BuddybobApp.instance.removeVoiceMuteListener(muteListener)
         statusBinder?.stop()
         statusBinder = null
         cancelInactivityTimer()
@@ -488,5 +617,9 @@ class MainActivity : AppCompatActivity() {
         hideVoiceTranscript()
         handler.removeCallbacksAndMessages(null)
         super.onDestroy()
+    }
+
+    companion object {
+        private const val TAG = "MainActivity"
     }
 }

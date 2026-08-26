@@ -107,6 +107,12 @@ function MediaField({
               src={media.url}
               alt={media.fileName}
               className="max-h-40 w-full object-contain"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+                setErr(
+                  "Anteprima non disponibile (URL media). Salva e riprova, o ricarica il file."
+                );
+              }}
             />
           ) : null}
           {isVideo ? (

@@ -7,6 +7,11 @@ import {
   ownContentFromRow,
   resolvedFieldsForPlace,
 } from "@/lib/placeContentServer";
+import type { PlaceMedia } from "@/lib/placeContent";
+import {
+  createSignedPlaceMediaReadUrl,
+  objectPathFromPlaceMediaUrl,
+} from "@/lib/supabaseStorageAdmin";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -21,6 +26,21 @@ const bodySchema = z.object({
   ),
 });
 
+async function mediaForRobot(
+  media: PlaceMedia | null | undefined
+): Promise<PlaceMedia | null> {
+  if (!media?.url?.trim()) return null;
+  const path =
+    media.path?.trim() || objectPathFromPlaceMediaUrl(media.url) || "";
+  if (!path) return media;
+  try {
+    const url = await createSignedPlaceMediaReadUrl(path);
+    return { ...media, path, url };
+  } catch {
+    return media;
+  }
+}
+
 export async function GET(req: Request, ctx: Ctx) {
   const { id } = await ctx.params;
   const robot = await authenticateRobotRequest(
@@ -31,8 +51,8 @@ export async function GET(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { places, mode, shared, groupById } = await loadPlaceContentBundle(id);
-  return NextResponse.json({
-    places: places.map((p) => {
+  const out = await Promise.all(
+    places.map(async (p) => {
       const label = (p.label || p.name).trim();
       const resolved = resolvedFieldsForPlace({
         mode,
@@ -41,6 +61,13 @@ export async function GET(req: Request, ctx: Ctx) {
         own: ownContentFromRow(p),
         label,
       });
+      const [mediaOnDepart, mediaWhileMoving, mediaOnArrive] = await Promise.all(
+        [
+          mediaForRobot(resolved.mediaOnDepart),
+          mediaForRobot(resolved.mediaWhileMoving),
+          mediaForRobot(resolved.mediaOnArrive),
+        ]
+      );
       return {
         name: p.name,
         label: p.label,
@@ -49,9 +76,13 @@ export async function GET(req: Request, ctx: Ctx) {
         theta: p.theta,
         waitSeconds: p.waitSeconds,
         ...resolved,
+        mediaOnDepart,
+        mediaWhileMoving,
+        mediaOnArrive,
       };
-    }),
-  });
+    })
+  );
+  return NextResponse.json({ places: out });
 }
 
 export async function POST(req: Request, ctx: Ctx) {
