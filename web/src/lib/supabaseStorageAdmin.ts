@@ -47,6 +47,20 @@ function signedUrlTtlSec(): number {
   );
 }
 
+/**
+ * Aggiunge/sostituisce `token` una sola volta (evita token=a&token=b → 400 Supabase).
+ */
+export function withStorageUploadToken(
+  uploadUrl: string,
+  token: string
+): string {
+  const t = String(token || "").trim();
+  if (!t) return uploadUrl;
+  const u = new URL(uploadUrl);
+  u.searchParams.set("token", t);
+  return u.toString();
+}
+
 function encodeObjectPath(objectPath: string): string {
   // Encode each path segment but keep slashes for nested folder support.
   return objectPath
@@ -191,14 +205,17 @@ export async function createSignedUploadUrl(params: {
     path?: string;
     signedURL?: string;
   };
-  const token = data.token;
+  const token = String(data.token ?? "").trim();
   if (!token) {
     throw new Error("Supabase signed upload token missing");
   }
   const relative = data.url || data.signedURL || "";
-  const uploadUrl = absoluteStorageUrl(
-    relative ||
-      `/object/upload/sign/${encodeObjectPath(androidApkBucket())}/${encodeObjectPath(objectPath)}`
+  const uploadUrl = withStorageUploadToken(
+    absoluteStorageUrl(
+      relative ||
+        `/object/upload/sign/${encodeObjectPath(androidApkBucket())}/${encodeObjectPath(objectPath)}`
+    ),
+    token
   );
   return {
     uploadUrl,
@@ -425,14 +442,17 @@ export async function createSignedPlaceMediaUploadUrl(params: {
     path?: string;
     signedURL?: string;
   };
-  const token = data.token;
+  const token = String(data.token ?? "").trim();
   if (!token) {
     throw new Error("Supabase signed upload token missing");
   }
   const relative = data.url || data.signedURL || "";
-  const uploadUrl = absoluteStorageUrl(
-    relative ||
-      `/object/upload/sign/${encodeObjectPath(placeMediaBucket())}/${encodeObjectPath(objectPath)}`
+  const uploadUrl = withStorageUploadToken(
+    absoluteStorageUrl(
+      relative ||
+        `/object/upload/sign/${encodeObjectPath(placeMediaBucket())}/${encodeObjectPath(objectPath)}`
+    ),
+    token
   );
   return {
     uploadUrl,

@@ -42,9 +42,10 @@ async function uploadIdleMedia(
   if (!startRes.ok) {
     throw new Error(start.error ?? "Impossibile preparare il caricamento");
   }
-  const uploadUrl: string = start.token
-    ? `${start.uploadUrl}${start.uploadUrl.includes("?") ? "&" : "?"}token=${encodeURIComponent(start.token)}`
-    : start.uploadUrl;
+  const uploadUrl: string = start.uploadUrl;
+  if (!uploadUrl || typeof uploadUrl !== "string") {
+    throw new Error("URL di upload mancante");
+  }
   const put = await fetch(uploadUrl, {
     method: "PUT",
     headers: {
@@ -54,7 +55,15 @@ async function uploadIdleMedia(
     body: file,
   });
   if (!put.ok) {
-    throw new Error("Caricamento non riuscito");
+    const t = await put.text().catch(() => "");
+    let msg = "Caricamento non riuscito";
+    try {
+      const j = JSON.parse(t) as { message?: string };
+      if (j.message) msg = j.message;
+    } catch {
+      if (t) msg = t.slice(0, 200);
+    }
+    throw new Error(msg);
   }
   const doneRes = await fetch("/api/admin/place-media/complete", {
     method: "POST",
