@@ -36,6 +36,7 @@ import com.buddybob.robot.ui.avatar.BobAvatarMode
 import com.buddybob.robot.ui.avatar.BobAvatarView
 import com.buddybob.robot.ui.SpeechFragment
 import com.buddybob.robot.ui.VoiceMemosFragment
+import com.buddybob.robot.ui.games.GamesHubFragment
 import com.buddybob.robot.ui.widget.SystemStatusBinder
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -66,6 +67,8 @@ class MainActivity : AppCompatActivity() {
             bindSystemStatus()
             bindDialogueStopButtons()
             bindVoiceMuteButton()
+            bindVoiceMicButton()
+            bindVoiceLangButton()
             openReceptionOrHome()
         }, 700)
     }
@@ -82,24 +85,151 @@ class MainActivity : AppCompatActivity() {
         applyVoiceMuteUi(muted)
     }
 
+    private val listeningListener: (Boolean) -> Unit = { listening ->
+        applyVoiceMicListeningUi(listening)
+    }
+
     private fun bindVoiceMuteButton() {
         val btn = findViewById<ImageButton?>(R.id.btn_voice_mute) ?: return
         btn.setOnClickListener {
             BuddybobApp.instance.toggleVoiceMute()
         }
         BuddybobApp.instance.addVoiceMuteListener(muteListener)
-        refreshVoiceMuteVisibility()
+        refreshVoiceControlsVisibility()
         applyVoiceMuteUi(BuddybobApp.instance.isVoiceMuted())
     }
 
-    /** Mostra il mute solo se il modulo speech è attivo. */
-    fun refreshVoiceMuteVisibility() {
+    private fun bindVoiceMicButton() {
+        val btn = findViewById<ImageButton?>(R.id.btn_voice_mic) ?: return
+        btn.setOnClickListener {
+            if (BuddybobApp.instance.isVoiceMuted()) return@setOnClickListener
+            BuddybobApp.instance.startVoiceListeningFromUi()
+        }
+        BuddybobApp.instance.addVoiceListeningListener(listeningListener)
+        applyVoiceMicListeningUi(BuddybobApp.instance.isVoiceSessionArmed())
+    }
+
+    private fun bindVoiceLangButton() {
+        val btn = findViewById<ImageButton?>(R.id.btn_voice_lang) ?: return
+        btn.setOnClickListener { showSpeechLanguagePicker() }
+        refreshVoiceControlsVisibility()
+    }
+
+    private fun showSpeechLanguagePicker() {
+        val langs = arrayOf(
+            "Italiano" to "it",
+            "English" to "en",
+            "Deutsch" to "de",
+            "Français" to "fr",
+            "Español" to "es"
+        )
+        val labels = langs.map { it.first }.toTypedArray()
+        val current = BuddybobApp.instance.config.current.speech.language.lowercase()
+        val checked = langs.indexOfFirst { it.second == current }.coerceAtLeast(0)
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.voice_lang_title)
+            .setSingleChoiceItems(labels, checked) { dialog, which ->
+                dialog.dismiss()
+                applySpeechLanguage(langs[which].second, langs[which].first)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun applySpeechLanguage(code: String, label: String) {
+        Thread {
+            try {
+                val api = com.buddybob.robot.platform.PlatformApi()
+                if (!api.isConfigured()) {
+                    applySpeechLanguageLocal(code)
+                    handler.post {
+                        val greet = BuddybobApp.instance.config.current.phrases.wakeGreeting
+                        showVoiceSaid(getString(R.string.voice_lang_updated, label))
+                        if (greet.isNotBlank()) {
+                            BuddybobApp.instance.robot.speech.speak(greet)
+                        }
+                        showVoiceWakeHint()
+                    }
+                    return@Thread
+                }
+                val res = api.setSpeechLanguage(code)
+                applySpeechLanguageFromServer(res)
+                handler.post {
+                    val greet = BuddybobApp.instance.config.current.phrases.wakeGreeting
+                        .ifBlank { getString(R.string.voice_lang_updated, label) }
+                    showVoiceSaid(getString(R.string.voice_lang_updated, label))
+                    BuddybobApp.instance.robot.speech.speak(greet)
+                    showVoiceWakeHint()
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "speech language failed", e)
+                handler.post {
+                    showVoiceSaid(getString(R.string.voice_lang_failed))
+                }
+            }
+        }.start()
+    }
+
+    private fun applySpeechLanguageFromServer(
+        res: com.buddybob.robot.platform.PlatformApi.SpeechLanguageResponse
+    ) {
+        val cfg = BuddybobApp.instance.config.current
+        val p = res.phrases
+        val phrases = cfg.phrases.copy(
+            welcome = p?.welcome ?: cfg.phrases.welcome,
+            howCanIHelp = p?.howCanIHelp ?: cfg.phrases.howCanIHelp,
+            goingTo = p?.goingTo ?: cfg.phrases.goingTo,
+            arrived = p?.arrived ?: cfg.phrases.arrived,
+            navigationFailed = p?.navigationFailed ?: cfg.phrases.navigationFailed,
+            followStarted = p?.followStarted ?: cfg.phrases.followStarted,
+            followLost = p?.followLost ?: cfg.phrases.followLost,
+            personNotFound = p?.personNotFound ?: cfg.phrases.personNotFound,
+            goodbye = p?.goodbye ?: cfg.phrases.goodbye,
+            configUpdated = p?.configUpdated ?: cfg.phrases.configUpdated,
+            configUpdateFailed = p?.configUpdateFailed ?: cfg.phrases.configUpdateFailed,
+            wakeHintLabel = p?.wakeHintLabel ?: cfg.phrases.wakeHintLabel,
+            wakeHint = p?.wakeHint ?: cfg.phrases.wakeHint,
+            wakeGreeting = p?.wakeGreeting ?: cfg.phrases.wakeGreeting
+        )
+        val appointments = cfg.appointments.copy(
+            checkInSpeak = res.appointments?.checkInSpeak ?: cfg.appointments.checkInSpeak,
+            callOperatorSpeak = res.appointments?.callOperatorSpeak
+                ?: cfg.appointments.callOperatorSpeak
+        )
+        val updated = cfg.copy(
+            speech = cfg.speech.copy(language = res.language),
+            robot = cfg.robot.copy(locale = res.locale ?: cfg.robot.locale),
+            phrases = phrases,
+            appointments = appointments
+        )
+        BuddybobApp.instance.config.saveLocal(updated)
+        BuddybobApp.instance.robot.speech.applyEngineLanguage(res.language)
+    }
+
+    /** Offline: aggiorna solo il codice lingua in cache (frasi al prossimo sync). */
+    private fun applySpeechLanguageLocal(code: String) {
+        val cfg = BuddybobApp.instance.config.current
+        BuddybobApp.instance.config.saveLocal(
+            cfg.copy(speech = cfg.speech.copy(language = code))
+        )
+        BuddybobApp.instance.robot.speech.applyEngineLanguage(code)
+    }
+
+    /** Mostra i microfoni solo se il modulo speech è attivo. */
+    fun refreshVoiceControlsVisibility() {
         handler.post {
-            val btn = findViewById<ImageButton?>(R.id.btn_voice_mute) ?: return@post
             val speechOn = BuddybobApp.instance.config.current.modules.speech
-            btn.visibility = if (speechOn) View.VISIBLE else View.GONE
+            val vis = if (speechOn) View.VISIBLE else View.GONE
+            findViewById<ImageButton?>(R.id.btn_voice_mute)?.visibility = vis
+            findViewById<ImageButton?>(R.id.btn_voice_mic)?.visibility = vis
+            findViewById<ImageButton?>(R.id.btn_voice_lang)?.visibility = vis
+            findViewById<View?>(R.id.cluster_voice_mics)?.visibility = vis
         }
     }
+
+    /** @deprecated use [refreshVoiceControlsVisibility] */
+    fun refreshVoiceMuteVisibility() = refreshVoiceControlsVisibility()
 
     private fun applyVoiceMuteUi(muted: Boolean) {
         val btn = findViewById<ImageButton?>(R.id.btn_voice_mute) ?: return
@@ -110,8 +240,16 @@ class MainActivity : AppCompatActivity() {
             if (muted) R.string.voice_unmute_button else R.string.voice_mute_button
         )
         btn.alpha = if (muted) 1f else 0.92f
+        findViewById<ImageButton?>(R.id.btn_voice_mic)?.alpha =
+            if (muted) 0.35f else 1f
     }
 
+    private fun applyVoiceMicListeningUi(listening: Boolean) {
+        val btn = findViewById<ImageButton?>(R.id.btn_voice_mic) ?: return
+        btn.setBackgroundResource(
+            if (listening) R.drawable.bg_mic_listening else R.drawable.bg_mic_idle
+        )
+    }
     enum class StopPlacement { SPEAKING, MOVING }
 
     /** Pulsante STOP rosso: a destra (dialogo) o in basso al centro (movimento). */
@@ -147,8 +285,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Edge-to-edge: la nostra barra nera parte dal bordo fisico dello schermo.
-     * Nasconde le icone di sistema (sgranate su OrionStar).
+     * Edge-to-edge: usa tutto il monitor. Barre di sistema nascoste.
      */
     private fun applyImmersiveChrome() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -190,33 +327,30 @@ class MainActivity : AppCompatActivity() {
         bindBottomSafeArea()
     }
 
-    /** Evita che «Ho sentito» / STOP finiscano sotto nav bar o bezel. */
+    /**
+     * Padding *dentro* la barra voce (stesso colore del dock): niente margine sotto
+     * che lasciasse vedere lo sfondo. STOP flottante resta sopra il contenuto.
+     */
     private fun bindBottomSafeArea() {
-        val root = findViewById<View?>(R.id.bar_voice_transcript)?.parent as? View ?: return
         val voiceBar = findViewById<View>(R.id.bar_voice_transcript) ?: return
         val stopSpeak = findViewById<View?>(R.id.btn_stop_speak)
         val density = resources.displayMetrics.density
-        val baseVoice = (36 * density).toInt()
-        val baseStop = (48 * density).toInt()
-        // Su OrionStar spesso insets.bottom = 0: margine minimo extra di sicurezza
-        val fallbackExtra = (20 * density).toInt()
+        val basePad = (14 * density).toInt()
+        val baseStop = (28 * density).toInt()
 
-        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(voiceBar) { v, insets ->
             val bottom = insets.getInsets(
                 WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
             ).bottom
-            val pad = if (bottom > 0) bottom else fallbackExtra
-            (voiceBar.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.let { lp ->
-                lp.bottomMargin = baseVoice + pad
-                voiceBar.layoutParams = lp
-            }
+            // Solo inset reale: niente “fallback” che creava una fascia vuota sotto il dock
+            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePad + bottom)
             (stopSpeak?.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.let { lp ->
-                lp.bottomMargin = baseStop + pad
+                lp.bottomMargin = baseStop + bottom
                 stopSpeak.layoutParams = lp
             }
             insets
         }
-        ViewCompat.requestApplyInsets(root)
+        ViewCompat.requestApplyInsets(voiceBar)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -290,15 +424,22 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Hint a schermo: serve la wake word («ehi Bob»). */
+    /** Hint a schermo: serve la wake word («ehi Bob»). Testo dalla config (lingua parlato). */
     fun showVoiceWakeHint() {
         handler.post {
             val bar = findViewById<LinearLayout?>(R.id.bar_voice_transcript) ?: return@post
             val label = findViewById<TextView?>(R.id.label_voice_heard)
             val body = findViewById<TextView?>(R.id.text_voice_transcript) ?: return@post
-            label?.setText(R.string.voice_wake_hint_label)
+            val phrases = BuddybobApp.instance.config.current.phrases
+            val hintLabel = phrases.wakeHintLabel.ifBlank {
+                getString(R.string.voice_wake_hint_label)
+            }
+            val hintBody = phrases.wakeHint.ifBlank {
+                getString(R.string.voice_wake_hint)
+            }
+            label?.text = hintLabel
             label?.setTextColor(getColor(R.color.bob_navy))
-            body.setText(R.string.voice_wake_hint)
+            body.text = hintBody
             bar.visibility = View.VISIBLE
             cancelTranscriptHide()
         }
@@ -316,15 +457,16 @@ class MainActivity : AppCompatActivity() {
         transcriptHideRunnable = null
     }
 
-    /** ASR / TTS spesso omettono «?»: aggiungilo sulle domande italiane. */
+    /** ASR / TTS spesso omettono «?»: aggiungilo sulle domande (IT + altre lingue). */
     private fun ensureQuestionMark(raw: String): String {
         val t = raw.trim()
         if (t.isEmpty() || t.endsWith("?") || t.endsWith("!") || t.endsWith("…")) return t
         val last = t.split(Regex("(?<=[.!;])\\s+")).lastOrNull()?.trim()?.lowercase() ?: t.lowercase()
         val stripped = last.replace(
             Regex(
-                "^(ciao|salve|buongiorno|buonasera|ok|okay|bene|certo|allora|quindi|dunque|" +
-                    "e|ma|però|pero|senti|scusa|scusami|dimmi|guarda|ecco)[,!\\s]+",
+                "^(ciao|salve|buongiorno|buonasera|hi|hello|hey|hallo|bonjour|hola|" +
+                    "ok|okay|bene|certo|allora|quindi|dunque|" +
+                    "e|ma|però|pero|senti|scusa|scusami|dimmi|guarda|ecco|well|so|alors|pues)[,!\\s]+",
                 RegexOption.IGNORE_CASE
             ),
             ""
@@ -333,12 +475,20 @@ class MainActivity : AppCompatActivity() {
             "^(chi|che|cosa|come|dove|quando|perché|perche|quanto|quanti|quante|quale|quali|" +
                 "puoi|potresti|vuoi|vorresti|sai|sapresti|c'è|ci sono|" +
                 "posso|possiamo|mi (puoi|sai|dici|diresti|aiuti)|" +
-                "ti (va|piace|ricordi|chiami)|hai (già |un |una |degli |delle |appuntamento)|avete )\\b"
+                "ti (va|piace|ricordi|chiami)|hai (già |un |una |degli |delle |appuntamento)|avete |" +
+                "who|what|where|when|why|how|which|can|could|would|do|does|did|is|are|" +
+                "wer|wie|wo|wann|warum|können|kannst|" +
+                "qui|que|quoi|où|comment|quand|pourquoi|" +
+                "quién|quien|qué|dónde|donde|cuándo|cuando|cómo|como|puedes|puede)\\b"
         ).containsMatchIn(stripped)
         val hasWh = Regex(
-            "\\b(chi|che cosa|cosa|come|dove|quando|perché|perche|quale|quali|quanto|quanti|quante)\\b"
+            "\\b(chi|che cosa|cosa|come|dove|quando|perché|perche|quale|quali|quanto|quanti|quante|" +
+                "who|what|where|when|why|how|which|wer|wie|wo|wann|warum|" +
+                "qui|que|quoi|où|comment|quand|pourquoi|quién|qué|dónde|cuándo|cómo)\\b"
         ).containsMatchIn(last)
-        val tagQ = Regex("\\b(vero|no|giusto|ok)\\s*$").containsMatchIn(last)
+        val tagQ = Regex(
+            "\\b(vero|no|giusto|ok|right|correct|nicht wahr|oui|verdad)\\s*$"
+        ).containsMatchIn(last)
         return if (questionLead || (hasWh && last.length <= 160) || tagQ) "$t?" else t
     }
 
@@ -546,7 +696,7 @@ class MainActivity : AppCompatActivity() {
             "talkToMe" -> SpeechFragment.newInstance()
             "callOperator" -> CallOperatorFragment.newInstance()
             "accessControl" -> AccessControlFragment.newInstance()
-            "games" -> PlaceholderFeatureFragment.newInstance("games", "Giochi")
+            "games" -> GamesHubFragment.newInstance()
             "voiceMemos" -> VoiceMemosFragment.newInstance(awaitStart = true)
             else -> return
         }
@@ -610,6 +760,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         BuddybobApp.instance.removeVoiceMuteListener(muteListener)
+        BuddybobApp.instance.removeVoiceListeningListener(listeningListener)
         statusBinder?.stop()
         statusBinder = null
         cancelInactivityTimer()

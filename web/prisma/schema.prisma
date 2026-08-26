@@ -146,6 +146,9 @@ model RobotSettings {
   /// URL feed iCal (Google «indirizzo segreto», Outlook ICS, ecc.)
   calendarSyncIcalUrl  String @default("")
   calendarLastSyncAt   DateTime?
+
+  /// URL hub giochi (WebView a schermo intero sul robot)
+  gamesUrl String @default("https://robo-play-land.base44.app")
 }
 
 /// Contatto ospite in rubrica (per azienda)

@@ -17,6 +17,7 @@ data class BobConfig(
     val follow: Follow = Follow(),
     val appointments: Appointments = Appointments(),
     val reception: Reception = Reception(),
+    val games: Games = Games(),
     val ui: Ui = Ui(),
     val sync: Sync = Sync()
 ) {
@@ -33,7 +34,7 @@ data class BobConfig(
         val motion: Boolean = true,
         val speech: Boolean = true,
         val follow: Boolean = true,
-        val charge: Boolean = false,
+        val charge: Boolean = true,
         val settings: Boolean = true
     )
 
@@ -48,7 +49,10 @@ data class BobConfig(
         val personNotFound: String = "Non vedo nessuno da seguire",
         val goodbye: String = "A presto!",
         val configUpdated: String = "Configurazione aggiornata",
-        val configUpdateFailed: String = "Aggiornamento configurazione non riuscito"
+        val configUpdateFailed: String = "Aggiornamento configurazione non riuscito",
+        val wakeHintLabel: String = "Per parlare",
+        val wakeHint: String = "Dimmi ehi Bob per parlare con me",
+        val wakeGreeting: String = "Ciao, sì sono io Bob. Come posso aiutarti?"
     ) {
         fun format(template: String, vararg pairs: Pair<String, String>): String {
             var out = template
@@ -80,6 +84,8 @@ data class BobConfig(
     )
 
     data class Speech(
+        /** it | en | de | fr | es — parlato/risposte; UI monitor resta italiana. */
+        val language: String = "it",
         val enabledOnStart: Boolean = true,
         val continuousRecognition: Boolean = false
     )
@@ -96,6 +102,11 @@ data class BobConfig(
         val checkInSpeak: String = "Perfetto, ho avvisato che sei arrivato",
         val callOperatorSpeak: String = "Sto chiamando un operatore",
         val apiKey: String = "bob-demo-api-key"
+    )
+
+    data class Games(
+        /** Hub giochi WebView a schermo intero. */
+        val url: String = "https://robo-play-land.base44.app"
     )
 
     data class Reception(

@@ -75,6 +75,23 @@ const patchSchema = z.object({
   calendarSyncProvider: z.enum(["none", "ical", "google", "teams"]).optional(),
   calendarSyncEnabled: z.boolean().optional(),
   calendarSyncIcalUrl: z.string().max(800).optional(),
+  gamesUrl: z
+    .string()
+    .max(800)
+    .refine(
+      (v) => {
+        const t = v.trim();
+        if (!t) return true;
+        try {
+          const u = new URL(t);
+          return u.protocol === "https:" || u.protocol === "http:";
+        } catch {
+          return false;
+        }
+      },
+      { message: "URL non valido (usa http/https)" }
+    )
+    .optional(),
 });
 
 export async function PATCH(req: Request) {
@@ -129,6 +146,9 @@ export async function PATCH(req: Request) {
       calendarSyncProvider: settings.calendarSyncProvider ?? "none",
       calendarSyncEnabled: settings.calendarSyncEnabled ?? false,
       calendarSyncIcalUrl: settings.calendarSyncIcalUrl ?? "",
+      gamesUrl:
+        settings.gamesUrl?.trim() ||
+        "https://robo-play-land.base44.app",
       dayStart: settings.dayStart,
       dayEnd: settings.dayEnd,
       slotMinutes: settings.slotMinutes,

@@ -126,6 +126,7 @@ export function buildRobotConfig(
       idleMediaIntervalSec?: number;
       idleMediaStopMode?: string;
       speechLanguage?: string;
+      gamesUrl?: string;
     } | null;
   },
   adminModules?: AdminModules
@@ -138,6 +139,8 @@ export function buildRobotConfig(
   const m = adminModules ?? DEFAULT_ADMIN_MODULES;
   const lang = normalizeSpeechLanguage(s?.speechLanguage);
   const pack = speechPhrases(lang);
+  const gamesUrl =
+    (s?.gamesUrl ?? "").trim() || "https://robo-play-land.base44.app";
   // Frasi custom admin solo se lingua italiana (altrimenti pacchetto tradotto)
   const welcome =
     lang === "it"
@@ -209,6 +212,7 @@ export function buildRobotConfig(
       idleMediaIntervalSec: s?.idleMediaIntervalSec,
       idleMediaStopMode: s?.idleMediaStopMode,
       speechLanguage: lang,
+      gamesUrl,
     }),
     updatedAt: new Date().toISOString(),
     robot: {
@@ -238,6 +242,9 @@ export function buildRobotConfig(
       language: lang,
       enabledOnStart: true,
       continuousRecognition: false,
+    },
+    games: {
+      url: gamesUrl,
     },
     assets: {
       idleScreen: idleMedia,

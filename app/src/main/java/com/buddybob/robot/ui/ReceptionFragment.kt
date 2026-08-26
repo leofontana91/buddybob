@@ -1,6 +1,8 @@
 package com.buddybob.robot.ui
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -8,15 +10,17 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.buddybob.robot.BuddybobApp
 import com.buddybob.robot.MainActivity
 import com.buddybob.robot.R
 import com.buddybob.robot.config.BobConfig
+import com.buddybob.robot.platform.PlaceContentStore
 import com.buddybob.robot.robot.ReceptionController
 import com.buddybob.robot.ui.avatar.BobAvatarMode
 import com.buddybob.robot.ui.avatar.BobAvatarView
+import com.buddybob.robot.ui.games.GamesHubFragment
 
 class ReceptionFragment : Fragment() {
 
@@ -28,8 +32,10 @@ class ReceptionFragment : Fragment() {
     private lateinit var avatarIdle: BobAvatarView
     private lateinit var avatarGreeting: BobAvatarView
     private lateinit var avatarMenu: BobAvatarView
-    private lateinit var btnMic: ImageButton
     private lateinit var btnSettings: ImageButton
+
+    private val main = Handler(Looper.getMainLooper())
+    private var idleMediaVisible = false
 
     private val reception: ReceptionController
         get() = BuddybobApp.instance.robot.reception
@@ -50,8 +56,17 @@ class ReceptionFragment : Fragment() {
         }
     }
 
-    private val listeningListener: (Boolean) -> Unit = { listening ->
-        if (isAdded) applyMicListening(listening)
+    private val idleMediaTick = object : Runnable {
+        override fun run() {
+            if (!isAdded) return
+            if (reception.phase != ReceptionController.Phase.IDLE) return
+            showIdleAttract()
+            val intervalSec = BuddybobApp.instance.config.current.reception
+                .idleMediaIntervalSec.coerceAtLeast(0)
+            if (intervalSec > 0 && hasIdleAttract()) {
+                main.postDelayed(this, intervalSec * 1000L)
+            }
+        }
     }
 
     override fun onCreateView(
@@ -68,32 +83,25 @@ class ReceptionFragment : Fragment() {
         avatarIdle = root.findViewById(R.id.bob_avatar_idle)
         avatarGreeting = root.findViewById(R.id.bob_avatar_greeting)
         avatarMenu = root.findViewById(R.id.bob_avatar_menu)
-        btnMic = root.findViewById(R.id.btn_voice_mic)
         btnSettings = root.findViewById(R.id.btn_settings)
 
         textGreeting.text = BuddybobApp.instance.config.current.phrases.welcome
-        recyclerMenu.layoutManager = GridLayoutManager(requireContext(), 2)
+        recyclerMenu.layoutManager = LinearLayoutManager(requireContext())
         bindMenu()
 
         panelIdle.setOnClickListener {
-            reception.simulateGuest()
+            onIdleScreenTapped()
         }
         btnSettings.setOnClickListener { SettingsGate.prompt(this) }
-        btnMic.setOnClickListener {
-            avatar.noteActivity()
-            BuddybobApp.instance.startVoiceListeningFromUi()
-        }
         panelGreeting.setOnClickListener {
             reception.skipGreetingToMenu()
         }
-        // Qualsiasi tocco sullo schermo in idle ritarda lo standby
         root.setOnTouchListener { _, _ ->
             if (reception.phase == ReceptionController.Phase.IDLE) {
                 avatar.noteActivity()
             }
             false
         }
-        applyMicListening(false)
         return root
     }
 
@@ -102,7 +110,6 @@ class ReceptionFragment : Fragment() {
         reception.onPhaseChanged = phaseListener
         reception.onStatus = { BuddybobApp.instance.robot.log("Reception: $it") }
         avatar.addListener(avatarListener)
-        BuddybobApp.instance.addVoiceListeningListener(listeningListener)
         avatarIdle.bindSignals(avatar)
         avatarGreeting.bindSignals(avatar)
         avatarMenu.bindSignals(avatar)
@@ -110,20 +117,21 @@ class ReceptionFragment : Fragment() {
             reception.startListening()
         }
         val speechOn = BuddybobApp.instance.config.current.modules.speech
-        btnMic.visibility = if (speechOn) View.VISIBLE else View.GONE
         if (speechOn) {
             BuddybobApp.instance.robot.speech.setListeningDesired(true)
         }
+        (activity as? MainActivity)?.refreshVoiceControlsVisibility()
         renderPhase(reception.phase)
         avatar.onReceptionPhase(reception.phase)
     }
 
     override fun onPause() {
+        main.removeCallbacks(idleMediaTick)
+        hideIdleAttract(clearBlock = false)
         avatarIdle.unbindSignals()
         avatarGreeting.unbindSignals()
         avatarMenu.unbindSignals()
         avatar.removeListener(avatarListener)
-        BuddybobApp.instance.removeVoiceListeningListener(listeningListener)
         reception.onPhaseChanged = null
         super.onPause()
     }
@@ -132,17 +140,13 @@ class ReceptionFragment : Fragment() {
         if (!isAdded) return
         textGreeting.text = BuddybobApp.instance.config.current.phrases.welcome
         bindMenu()
-        btnMic.visibility =
-            if (BuddybobApp.instance.config.current.modules.speech) View.VISIBLE else View.GONE
+        (activity as? MainActivity)?.refreshVoiceControlsVisibility()
         if (!BuddybobApp.instance.config.current.modules.reception) {
             (activity as? MainActivity)?.openReceptionOrHome()
         }
-    }
-
-    private fun applyMicListening(listening: Boolean) {
-        btnMic.setBackgroundResource(
-            if (listening) R.drawable.bg_mic_listening else R.drawable.bg_mic_idle
-        )
+        if (reception.phase == ReceptionController.Phase.IDLE) {
+            scheduleIdleAttract()
+        }
     }
 
     private fun bindMenu() {
@@ -153,6 +157,7 @@ class ReceptionFragment : Fragment() {
     }
 
     private fun openFeature(button: BobConfig.MenuButton) {
+        hideIdleAttract(clearBlock = true)
         (activity as? MainActivity)?.hidePlaceDisplay()
         val fragment: Fragment = when (button.id) {
             "goTo" -> PlacesFragment.newInstance()
@@ -162,6 +167,7 @@ class ReceptionFragment : Fragment() {
             "documents" -> DocumentsFragment.newInstance()
             "accessControl" -> AccessControlFragment.newInstance()
             "voiceMemos" -> VoiceMemosFragment.newInstance(awaitStart = false)
+            "games" -> GamesHubFragment.newInstance()
             else -> PlaceholderFeatureFragment.newInstance(button.id, button.label)
         }
         open(fragment)
@@ -179,11 +185,77 @@ class ReceptionFragment : Fragment() {
         }
         if (phase == ReceptionController.Phase.GREETING) {
             textGreeting.text = BuddybobApp.instance.config.current.phrases.welcome
+            hideIdleAttract(clearBlock = true)
+        }
+        if (phase == ReceptionController.Phase.IDLE) {
+            scheduleIdleAttract()
+        } else {
+            main.removeCallbacks(idleMediaTick)
+            hideIdleAttract(clearBlock = false)
         }
     }
 
+    private fun onIdleScreenTapped() {
+        if (reception.phase != ReceptionController.Phase.IDLE) return
+        if (idleMediaVisible &&
+            BuddybobApp.instance.config.current.reception.idleMediaStopMode
+                .equals("tap", ignoreCase = true)
+        ) {
+            hideIdleAttract(clearBlock = true)
+            reception.simulateGuest()
+            return
+        }
+        reception.clearIdleMediaBlock()
+        hideIdleAttract(clearBlock = true)
+        reception.simulateGuest()
+    }
+
+    private fun hasIdleAttract(): Boolean {
+        val r = BuddybobApp.instance.config.current.reception
+        val media = r.idleMedia ?: BuddybobApp.instance.config.current.assets.idleScreen
+        return r.idleDisplayText.isNotBlank() || !media?.url.isNullOrBlank()
+    }
+
+    private fun scheduleIdleAttract() {
+        main.removeCallbacks(idleMediaTick)
+        if (!hasIdleAttract()) {
+            reception.idleMediaBlockingDetection = false
+            return
+        }
+        val stopTap = BuddybobApp.instance.config.current.reception.idleMediaStopMode
+            .equals("tap", ignoreCase = true)
+        reception.idleMediaBlockingDetection = stopTap
+        main.postDelayed(idleMediaTick, 600L)
+    }
+
+    private fun showIdleAttract() {
+        val r = BuddybobApp.instance.config.current.reception
+        val asset = r.idleMedia ?: BuddybobApp.instance.config.current.assets.idleScreen
+        val media = asset?.url?.trim()?.takeIf { it.isNotEmpty() }?.let {
+            PlaceContentStore.Media(it, asset.contentType ?: "")
+        }
+        val text = r.idleDisplayText.trim().ifBlank { null }
+        if (media == null && text == null) return
+        idleMediaVisible = true
+        (activity as? MainActivity)?.showPlaceDisplay(
+            text,
+            media,
+            showBobIfNoMedia = false,
+            showStopButton = false,
+            onOverlayClick = { onIdleScreenTapped() }
+        )
+    }
+
+    private fun hideIdleAttract(clearBlock: Boolean) {
+        main.removeCallbacks(idleMediaTick)
+        if (idleMediaVisible) {
+            (activity as? MainActivity)?.hidePlaceDisplay()
+        }
+        idleMediaVisible = false
+        if (clearBlock) reception.clearIdleMediaBlock()
+    }
+
     private fun updateSettingsVisibility(mode: BobAvatarMode = avatar.mode) {
-        // Nascoste in saluto e in standby (Bob che dorme)
         btnSettings.visibility = when {
             reception.phase == ReceptionController.Phase.GREETING -> View.GONE
             mode == BobAvatarMode.IDLE_SLEEP -> View.GONE

@@ -27,8 +27,12 @@
     <string name="places_refresh">Aggiorna</string>
     <string name="places_start">Parti</string>
     <string name="places_selected">%1$d selezionati</string>
-    <string name="places_wait_label">Sosta (sec)</string>
-    <string name="places_return">Torna al punto di partenza</string>
+    <string name="places_wait_label">Secondi di sosta a ogni tappa</string>
+    <string name="places_wait_hint">es. 10</string>
+    <string name="places_return">Torna al punto di partenza dopo l\'ultima tappa</string>
+    <string name="places_stay_hint">Se resta spenta, all\'arrivo resta fermo e apre il menu.</string>
+    <string name="places_options_overline">Impostazioni percorso</string>
+    <string name="places_route_empty">Nessuna tappa selezionata</string>
     <string name="places_route_done">Percorso completato</string>
     <string name="places_arriving">Arrivo a: %1$s</string>
     <string name="places_waiting">In sosta a %1$s (%2$d sec)…</string>
@@ -46,9 +50,18 @@
     <string name="voice_heard_label">Ho sentito</string>
     <string name="voice_said_label">Ho detto</string>
     <string name="voice_listening_hint">Ti ascolto — parla pure</string>
+    <string name="voice_wake_hint_label">Per parlare</string>
+    <string name="voice_wake_hint">Dimmi ehi Bob per parlare con me</string>
     <string name="voice_wake_greeting">Ciao, sì sono io Bob. Come posso aiutarti?</string>
     <string name="voice_stop">STOP</string>
     <string name="voice_mic_button">Parla con BOB</string>
+    <string name="voice_mute_button">Silenzia ascolto</string>
+    <string name="voice_lang_button">Lingua parlato</string>
+    <string name="voice_lang_title">Lingua in cui parla BOB</string>
+    <string name="voice_lang_updated">Ok, ora parlo in %1$s</string>
+    <string name="voice_lang_failed">Non riesco a cambiare lingua adesso</string>
+    <string name="voice_unmute_button">Riattiva ascolto</string>
+    <string name="voice_muted_hint">Ascolto spento — tocca il microfono rosso per riattivare</string>
     <string name="voice_moving_placeholder">Sto andando a %1$s</string>
     <string name="reception_idle_hint">BOB è qui — avvicinati o tocca lo schermo.\nDi\' «Bob» una volta e il comando, oppure tocca il microfono.</string>
     <string name="reception_simulate">Simula ospite</string>
@@ -60,6 +73,11 @@
     <string name="reception_tech">Comandi tecnici</string>
     <string name="back_to_reception">Torna all\'accoglienza</string>
     <string name="feature_coming_soon">Questa funzione arriverà a breve. L\'interruttore è già pronto nella configurazione.</string>
+
+    <!-- Giochi (WebView hub) -->
+    <string name="games_close">Esci</string>
+    <string name="games_load_failed">Non riesco ad aprire i giochi. Controlla la connessione o l’URL in Impostazioni → Giochi.</string>
+    <string name="games_bad_url">URL giochi non valido. Impostalo dalla console web.</string>
 
     <string name="appointments_title">Appuntamenti</string>
     <string name="appointments_hint">Come possiamo aiutarti?</string>
@@ -84,7 +102,9 @@
     <string name="voice_memos_start">Inizia a registrare</string>
     <string name="voice_memos_stop">Fine registrazione</string>
     <string name="voice_memos_recording">In registrazione…</string>
+    <string name="voice_memos_recording_side">Sto ascoltando…\nLa trascrizione comparirà qui quando tocchi «Ho finito».</string>
     <string name="voice_memos_uploading">Invio e trascrizione…</string>
+    <string name="voice_memos_uploading_side">Invio del memo e trascrizione in corso…</string>
     <string name="voice_memos_done">Memo salvato</string>
     <string name="voice_memos_done_speak">Memo salvato e trascritto.</string>
     <string name="voice_memos_saved_no_transcript">Memo salvato (trascrizione non disponibile)</string>
@@ -159,9 +179,12 @@
     <string name="docs_no">No</string>
 
     <string name="access_title">Controllo accessi</string>
-    <string name="access_hint">Registra ingresso con nome e cognome. Poi segna l\'uscita.</string>
+    <string name="access_hint">Registra ingresso con nome, cognome e con chi hai appuntamento.</string>
     <string name="access_first">Nome</string>
     <string name="access_last">Cognome</string>
+    <string name="access_host_label">Appuntamento con</string>
+    <string name="access_host_none">Nessuno / non specificato</string>
+    <string name="access_host_with">con %1$s</string>
     <string name="access_enter">Registra ingresso</string>
     <string name="access_inside">Persone dentro</string>
     <string name="access_exit">Esci</string>
