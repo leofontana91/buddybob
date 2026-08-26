@@ -36,6 +36,23 @@ export async function listAppointmentsForDate(robotId: string, dateIso: string) 
   });
 }
 
+export async function listAppointmentsInRange(
+  robotId: string,
+  fromIso: string,
+  toIso: string
+) {
+  const from = startOfDay(parse(fromIso, "yyyy-MM-dd", new Date()));
+  const to = endOfDay(parse(toIso, "yyyy-MM-dd", new Date()));
+  return prisma.appointment.findMany({
+    where: {
+      robotId,
+      startsAt: { gte: from, lte: to },
+      status: { not: "cancelled" },
+    },
+    orderBy: { startsAt: "asc" },
+  });
+}
+
 export async function getFreeSlots(
   robotId: string,
   fromIso: string,

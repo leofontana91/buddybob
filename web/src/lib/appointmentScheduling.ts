@@ -144,10 +144,28 @@ export async function suggestSlots(args: {
   const settings = await prisma.robotSettings.findUnique({
     where: { robotId: args.robotId },
   });
-  const dayStart = settings?.dayStart ?? "09:00";
-  const dayEnd = settings?.dayEnd ?? "18:00";
+  const room = args.roomId
+    ? await prisma.meetingRoom.findUnique({ where: { id: args.roomId } })
+    : null;
+
+  const dayStart = room?.dayStart || settings?.dayStart || "09:00";
+  const dayEnd = room?.dayEnd || settings?.dayEnd || "18:00";
+  const weekdaysRaw =
+    room?.weekdays || settings?.bookableWeekdays || "1,2,3,4,5";
+  const weekdays = new Set(
+    weekdaysRaw
+      .split(",")
+      .map((x) => Number(x.trim()))
+      .filter((n) => n >= 1 && n <= 7)
+  );
   const step = settings?.slotMinutes ?? 30;
   const day = startOfDay(parse(args.dateIso, "yyyy-MM-dd", new Date()));
+  // date-fns: Sunday=0 → ISO weekday
+  const isoDow = ((day.getDay() + 6) % 7) + 1;
+  if (weekdays.size && !weekdays.has(isoDow)) {
+    return [];
+  }
+
   const [sh, sm] = dayStart.split(":").map(Number);
   const [eh, em] = dayEnd.split(":").map(Number);
   let cursor = setMinutes(setHours(day, sh || 9), sm || 0);

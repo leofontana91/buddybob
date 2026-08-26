@@ -127,6 +127,7 @@ export function AdminShell({
     withRobotSelect && modules.appointments
       ? [
           { href: "/admin/calendar", label: "Calendario" },
+          { href: "/admin/waiting-room", label: "Sala d'attesa" },
           { href: "/admin/guests", label: "Gestione clienti" },
         ]
       : [];
@@ -207,7 +208,7 @@ export function AdminShell({
               className="bob-nav-item w-full text-left"
               onClick={() => setModulesOpen((v) => !v)}
             >
-              <span className="flex-1">Moduli</span>
+              <span className="flex-1">Impostazioni</span>
               <span className="text-[var(--bob-muted)] text-xs">
                 {modulesOpen ? "−" : "+"}
               </span>

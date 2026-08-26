@@ -17,10 +17,65 @@ type RoomRow = {
   id: string;
   name: string;
   mapPlaceName: string | null;
+  dayStart: string | null;
+  dayEnd: string | null;
+  weekdays: string | null;
   active: boolean;
 };
 
 type PlaceOpt = { name: string; label?: string | null };
+
+const WEEKDAY_OPTS = [
+  { id: 1, label: "Lun" },
+  { id: 2, label: "Mar" },
+  { id: 3, label: "Mer" },
+  { id: 4, label: "Gio" },
+  { id: 5, label: "Ven" },
+  { id: 6, label: "Sab" },
+  { id: 7, label: "Dom" },
+];
+
+function parseWeekdays(raw: string | null | undefined): number[] {
+  if (!raw) return [1, 2, 3, 4, 5];
+  return raw
+    .split(",")
+    .map((x) => Number(x.trim()))
+    .filter((n) => n >= 1 && n <= 7);
+}
+
+function WeekdayPicker({
+  value,
+  onChange,
+}: {
+  value: number[];
+  onChange: (v: number[]) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2 mt-2">
+      {WEEKDAY_OPTS.map((d) => {
+        const on = value.includes(d.id);
+        return (
+          <button
+            key={d.id}
+            type="button"
+            className={`px-3 py-1.5 text-sm rounded-lg border ${
+              on
+                ? "border-[var(--bob-ink)] bg-[var(--bob-cream)] font-medium"
+                : "border-[var(--bob-line)] opacity-60"
+            }`}
+            onClick={() =>
+              onChange(
+                on ? value.filter((x) => x !== d.id) : [...value, d.id].sort()
+              )
+            }
+          >
+            {d.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function AppointmentsSettingsPage() {
   const { robotId } = useRobot();
@@ -37,6 +92,10 @@ export default function AppointmentsSettingsPage() {
 
   const [roomName, setRoomName] = useState("");
   const [roomPlace, setRoomPlace] = useState("");
+  const [roomCustomHours, setRoomCustomHours] = useState(false);
+  const [roomDayStart, setRoomDayStart] = useState("09:00");
+  const [roomDayEnd, setRoomDayEnd] = useState("18:00");
+  const [roomWeekdays, setRoomWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
 
   const [settings, setSettings] = useState<{
@@ -46,7 +105,9 @@ export default function AppointmentsSettingsPage() {
     dayStart: string;
     dayEnd: string;
     slotMinutes: number;
+    bookableWeekdays?: string;
   } | null>(null);
+  const [globalWeekdays, setGlobalWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
 
   const load = useCallback(async () => {
     const [t, r] = await Promise.all([
@@ -70,7 +131,10 @@ export default function AppointmentsSettingsPage() {
       ]);
       if (s.ok) {
         const data = await s.json();
-        if (data.settings) setSettings(data.settings);
+        if (data.settings) {
+          setSettings(data.settings);
+          setGlobalWeekdays(parseWeekdays(data.settings.bookableWeekdays));
+        }
       }
       if (p.ok) {
         const data = await p.json();
@@ -116,6 +180,10 @@ export default function AppointmentsSettingsPage() {
         id: editingRoomId || undefined,
         name: roomName,
         mapPlaceName: roomPlace || null,
+        customHours: roomCustomHours,
+        dayStart: roomDayStart,
+        dayEnd: roomDayEnd,
+        weekdays: roomWeekdays.join(","),
       }),
     });
     if (!res.ok) {
@@ -124,6 +192,10 @@ export default function AppointmentsSettingsPage() {
     }
     setRoomName("");
     setRoomPlace("");
+    setRoomCustomHours(false);
+    setRoomDayStart("09:00");
+    setRoomDayEnd("18:00");
+    setRoomWeekdays([1, 2, 3, 4, 5]);
     setEditingRoomId(null);
     setMsg("Sala salvata");
     await load();
@@ -136,9 +208,13 @@ export default function AppointmentsSettingsPage() {
     const res = await fetch("/api/admin/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ robotId, ...settings }),
+      body: JSON.stringify({
+        robotId,
+        ...settings,
+        bookableWeekdays: globalWeekdays.join(",") || "1,2,3,4,5",
+      }),
     });
-    setMsg(res.ok ? "Prenotazione aggiornata" : "Errore salvataggio");
+    setMsg(res.ok ? "Orari e prenotazione aggiornati" : "Errore salvataggio");
   }
 
   function editType(t: TypeRow) {
@@ -153,6 +229,11 @@ export default function AppointmentsSettingsPage() {
     setEditingRoomId(r.id);
     setRoomName(r.name);
     setRoomPlace(r.mapPlaceName ?? "");
+    const custom = !!(r.dayStart || r.dayEnd || r.weekdays);
+    setRoomCustomHours(custom);
+    setRoomDayStart(r.dayStart || "09:00");
+    setRoomDayEnd(r.dayEnd || "18:00");
+    setRoomWeekdays(parseWeekdays(r.weekdays));
   }
 
   function toggleTypeRoom(id: string) {
@@ -166,8 +247,7 @@ export default function AppointmentsSettingsPage() {
       <div>
         <h1 className="bob-page-title">Impostazioni appuntamenti</h1>
         <p className="text-[var(--bob-muted)] mt-1">
-          Tipi di visita (con durata), sale e prenotazione pubblica. Operatività
-          giorno per giorno in{" "}
+          Orari prenotabili, tipi di visita e sale. Operatività in{" "}
           <Link href="/admin/calendar" className="underline">
             Calendario
           </Link>{" "}
@@ -177,8 +257,114 @@ export default function AppointmentsSettingsPage() {
           </Link>
           .
         </p>
-        {msg ? <p className="text-sm mt-2 text-[var(--bob-muted)]">{msg}</p> : null}
+        {msg ? (
+          <p className="text-sm mt-2 text-[var(--bob-muted)]">{msg}</p>
+        ) : null}
       </div>
+
+      {settings && robotId ? (
+        <form onSubmit={saveBooking} className="bob-card p-6 space-y-4">
+          <h2 className="font-semibold text-lg">Orari prenotabili (globali)</h2>
+          <p className="text-sm text-[var(--bob-muted)]">
+            Valgono per tutte le sale, salvo override sulla singola sala.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <label className="text-sm">
+              Dalle
+              <input
+                type="time"
+                className="mt-1 block bob-input"
+                value={settings.dayStart}
+                onChange={(e) =>
+                  setSettings({ ...settings, dayStart: e.target.value })
+                }
+              />
+            </label>
+            <label className="text-sm">
+              Alle
+              <input
+                type="time"
+                className="mt-1 block bob-input"
+                value={settings.dayEnd}
+                onChange={(e) =>
+                  setSettings({ ...settings, dayEnd: e.target.value })
+                }
+              />
+            </label>
+            <label className="text-sm">
+              Griglia (min)
+              <input
+                type="number"
+                min={5}
+                className="mt-1 block bob-input w-24"
+                value={settings.slotMinutes}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    slotMinutes: Number(e.target.value),
+                  })
+                }
+              />
+            </label>
+          </div>
+          <div>
+            <p className="text-sm font-medium">Giorni aperti</p>
+            <WeekdayPicker value={globalWeekdays} onChange={setGlobalWeekdays} />
+          </div>
+
+          <hr className="border-[var(--bob-line)]" />
+
+          <h3 className="font-medium">Prenotazione pubblica / robot</h3>
+          <fieldset>
+            <legend className="text-sm font-medium">Come si fissa</legend>
+            <div className="mt-2 flex flex-wrap gap-3">
+              <label className="flex items-center gap-2 bob-btn-secondary px-4 py-2">
+                <input
+                  type="radio"
+                  checked={settings.bookingMode === "qr"}
+                  onChange={() =>
+                    setSettings({ ...settings, bookingMode: "qr" })
+                  }
+                />
+                QR verso pagina web
+              </label>
+              <label className="flex items-center gap-2 bob-btn-secondary px-4 py-2">
+                <input
+                  type="radio"
+                  checked={settings.bookingMode === "in_app"}
+                  onChange={() =>
+                    setSettings({ ...settings, bookingMode: "in_app" })
+                  }
+                />
+                Sul monitor del robot
+              </label>
+            </div>
+          </fieldset>
+          <label className="block text-sm font-medium">
+            URL prenotazione
+            <input
+              className="mt-1 w-full bob-input"
+              value={settings.bookingUrl}
+              onChange={(e) =>
+                setSettings({ ...settings, bookingUrl: e.target.value })
+              }
+            />
+          </label>
+          <label className="block text-sm font-medium">
+            Frase dopo check-in
+            <input
+              className="mt-1 w-full bob-input"
+              value={settings.checkInSpeak}
+              onChange={(e) =>
+                setSettings({ ...settings, checkInSpeak: e.target.value })
+              }
+            />
+          </label>
+          <button type="submit" className="bob-btn px-5 py-2.5">
+            Salva orari e prenotazione
+          </button>
+        </form>
+      ) : null}
 
       <section className="space-y-4">
         <h2 className="font-semibold text-lg">Sale</h2>
@@ -207,6 +393,45 @@ export default function AppointmentsSettingsPage() {
               ))}
             </select>
           </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={roomCustomHours}
+              onChange={(e) => setRoomCustomHours(e.target.checked)}
+            />
+            Orari diversi da quelli globali
+          </label>
+          {roomCustomHours ? (
+            <div className="space-y-3 pl-1 border-l-2 border-[var(--bob-line)] ml-1">
+              <div className="flex flex-wrap gap-3">
+                <label className="text-sm">
+                  Dalle
+                  <input
+                    type="time"
+                    className="mt-1 block bob-input"
+                    value={roomDayStart}
+                    onChange={(e) => setRoomDayStart(e.target.value)}
+                  />
+                </label>
+                <label className="text-sm">
+                  Alle
+                  <input
+                    type="time"
+                    className="mt-1 block bob-input"
+                    value={roomDayEnd}
+                    onChange={(e) => setRoomDayEnd(e.target.value)}
+                  />
+                </label>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Giorni aperti per questa sala</p>
+                <WeekdayPicker
+                  value={roomWeekdays}
+                  onChange={setRoomWeekdays}
+                />
+              </div>
+            </div>
+          ) : null}
           <div className="flex gap-2">
             <button type="submit" className="bob-btn px-4 py-2 text-sm">
               {editingRoomId ? "Aggiorna sala" : "Aggiungi sala"}
@@ -219,6 +444,7 @@ export default function AppointmentsSettingsPage() {
                   setEditingRoomId(null);
                   setRoomName("");
                   setRoomPlace("");
+                  setRoomCustomHours(false);
                 }}
               >
                 Annulla
@@ -238,6 +464,9 @@ export default function AppointmentsSettingsPage() {
                   {r.mapPlaceName
                     ? `Mappa: ${r.mapPlaceName}`
                     : "Nessun punto mappa"}
+                  {r.dayStart
+                    ? ` · ${r.dayStart}–${r.dayEnd}`
+                    : " · orari globali"}
                   {!r.active ? " · disattivata" : ""}
                 </p>
               </div>
@@ -310,24 +539,21 @@ export default function AppointmentsSettingsPage() {
               Sale ammesse (vuoto = tutte)
             </legend>
             <div className="mt-2 flex flex-wrap gap-2">
-              {rooms.filter((r) => r.active).map((r) => (
-                <label
-                  key={r.id}
-                  className="flex items-center gap-2 bob-btn-secondary px-3 py-1.5 text-sm"
-                >
-                  <input
-                    type="checkbox"
-                    checked={typeRooms.includes(r.id)}
-                    onChange={() => toggleTypeRoom(r.id)}
-                  />
-                  {r.name}
-                </label>
-              ))}
-              {rooms.filter((r) => r.active).length === 0 ? (
-                <p className="text-sm text-[var(--bob-muted)]">
-                  Crea prima almeno una sala.
-                </p>
-              ) : null}
+              {rooms
+                .filter((r) => r.active)
+                .map((r) => (
+                  <label
+                    key={r.id}
+                    className="flex items-center gap-2 bob-btn-secondary px-3 py-1.5 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={typeRooms.includes(r.id)}
+                      onChange={() => toggleTypeRoom(r.id)}
+                    />
+                    {r.name}
+                  </label>
+                ))}
             </div>
           </fieldset>
           <div className="flex gap-2">
@@ -395,101 +621,6 @@ export default function AppointmentsSettingsPage() {
           ))}
         </ul>
       </section>
-
-      {settings && robotId ? (
-        <form onSubmit={saveBooking} className="bob-card p-6 space-y-4">
-          <h2 className="font-semibold text-lg">Prenotazione pubblica / robot</h2>
-          <fieldset>
-            <legend className="text-sm font-medium">
-              Come si fissa l&apos;appuntamento
-            </legend>
-            <div className="mt-2 flex flex-wrap gap-3">
-              <label className="flex items-center gap-2 bob-btn-secondary px-4 py-2">
-                <input
-                  type="radio"
-                  checked={settings.bookingMode === "qr"}
-                  onChange={() =>
-                    setSettings({ ...settings, bookingMode: "qr" })
-                  }
-                />
-                QR verso pagina web
-              </label>
-              <label className="flex items-center gap-2 bob-btn-secondary px-4 py-2">
-                <input
-                  type="radio"
-                  checked={settings.bookingMode === "in_app"}
-                  onChange={() =>
-                    setSettings({ ...settings, bookingMode: "in_app" })
-                  }
-                />
-                Sul monitor del robot
-              </label>
-            </div>
-          </fieldset>
-          <label className="block text-sm font-medium">
-            URL prenotazione
-            <input
-              className="mt-1 w-full bob-input"
-              value={settings.bookingUrl}
-              onChange={(e) =>
-                setSettings({ ...settings, bookingUrl: e.target.value })
-              }
-            />
-          </label>
-          <label className="block text-sm font-medium">
-            Frase dopo check-in
-            <input
-              className="mt-1 w-full bob-input"
-              value={settings.checkInSpeak}
-              onChange={(e) =>
-                setSettings({ ...settings, checkInSpeak: e.target.value })
-              }
-            />
-          </label>
-          <div className="flex flex-wrap gap-3">
-            <label className="text-sm">
-              Inizio giornata
-              <input
-                type="time"
-                className="mt-1 block bob-input"
-                value={settings.dayStart}
-                onChange={(e) =>
-                  setSettings({ ...settings, dayStart: e.target.value })
-                }
-              />
-            </label>
-            <label className="text-sm">
-              Fine giornata
-              <input
-                type="time"
-                className="mt-1 block bob-input"
-                value={settings.dayEnd}
-                onChange={(e) =>
-                  setSettings({ ...settings, dayEnd: e.target.value })
-                }
-              />
-            </label>
-            <label className="text-sm">
-              Griglia (min)
-              <input
-                type="number"
-                min={5}
-                className="mt-1 block bob-input w-24"
-                value={settings.slotMinutes}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    slotMinutes: Number(e.target.value),
-                  })
-                }
-              />
-            </label>
-          </div>
-          <button type="submit" className="bob-btn px-5 py-2.5">
-            Salva prenotazione
-          </button>
-        </form>
-      ) : null}
     </div>
   );
 }

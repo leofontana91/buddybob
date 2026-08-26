@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { z } from "zod";
 import { canAccessRobot, requireSession, effectiveAdminId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { listAppointmentsForDate } from "@/lib/appointments";
+import { listAppointmentsForDate, listAppointmentsInRange } from "@/lib/appointments";
 import {
   checkAvailability,
   formatConflictHint,
@@ -68,6 +68,8 @@ export async function GET(req: Request) {
 
   const date =
     url.searchParams.get("date") ?? format(new Date(), "yyyy-MM-dd");
+  const from = url.searchParams.get("from");
+  const to = url.searchParams.get("to");
 
   if (url.searchParams.get("suggest") === "1") {
     const durationMinutes = Number(url.searchParams.get("duration") || "30");
@@ -81,22 +83,40 @@ export async function GET(req: Request) {
     return NextResponse.json({ date, suggestions });
   }
 
+  const include = {
+    host: { select: { id: true, name: true } },
+    type: {
+      select: {
+        id: true,
+        name: true,
+        durationMinutes: true,
+        color: true,
+      },
+    },
+    room: { select: { id: true, name: true, mapPlaceName: true } },
+  } as const;
+
+  if (from && to) {
+    const rows = await listAppointmentsInRange(robotId, from, to);
+    const rich = rows.length
+      ? await prisma.appointment.findMany({
+          where: { id: { in: rows.map((l) => l.id) } },
+          include,
+          orderBy: { startsAt: "asc" },
+        })
+      : [];
+    return NextResponse.json({
+      from,
+      to,
+      appointments: rich.map(serializeAppt),
+    });
+  }
+
   const legacy = await listAppointmentsForDate(robotId, date);
   const rich = legacy.length
     ? await prisma.appointment.findMany({
         where: { id: { in: legacy.map((l) => l.id) } },
-        include: {
-          host: { select: { id: true, name: true } },
-          type: {
-            select: {
-              id: true,
-              name: true,
-              durationMinutes: true,
-              color: true,
-            },
-          },
-          room: { select: { id: true, name: true, mapPlaceName: true } },
-        },
+        include,
         orderBy: { startsAt: "asc" },
       })
     : [];

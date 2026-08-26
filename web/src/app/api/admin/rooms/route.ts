@@ -3,6 +3,30 @@ import { z } from "zod";
 import { effectiveAdminId, requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
+function serializeRoom(r: {
+  id: string;
+  name: string;
+  mapPlaceName: string | null;
+  dayStart: string | null;
+  dayEnd: string | null;
+  weekdays: string | null;
+  active: boolean;
+  sortOrder: number;
+  types: { typeId: string }[];
+}) {
+  return {
+    id: r.id,
+    name: r.name,
+    mapPlaceName: r.mapPlaceName,
+    dayStart: r.dayStart,
+    dayEnd: r.dayEnd,
+    weekdays: r.weekdays,
+    active: r.active,
+    sortOrder: r.sortOrder,
+    typeIds: r.types.map((t) => t.typeId),
+  };
+}
+
 export async function GET() {
   const session = await requireSession(["ADMIN", "SUPER_ADMIN"]);
   if (!session) {
@@ -22,22 +46,25 @@ export async function GET() {
   });
 
   return NextResponse.json({
-    rooms: rooms.map((r) => ({
-      id: r.id,
-      name: r.name,
-      mapPlaceName: r.mapPlaceName,
-      active: r.active,
-      sortOrder: r.sortOrder,
-      typeIds: r.types.map((t) => t.typeId),
-    })),
+    rooms: rooms.map(serializeRoom),
   });
 }
+
+const hm = z
+  .string()
+  .regex(/^\d{2}:\d{2}$/)
+  .optional()
+  .nullable();
 
 const upsertSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1).max(80),
   mapPlaceName: z.string().max(120).optional().nullable(),
+  dayStart: hm,
+  dayEnd: hm,
+  weekdays: z.string().max(40).optional().nullable(),
   active: z.boolean().optional(),
+  customHours: z.boolean().optional(),
 });
 
 export async function POST(req: Request) {
@@ -55,9 +82,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
   }
 
+  const useCustom = parsed.data.customHours === true;
   const data = {
     name: parsed.data.name.trim(),
     mapPlaceName: (parsed.data.mapPlaceName ?? "").trim() || null,
+    dayStart: useCustom ? parsed.data.dayStart || "09:00" : null,
+    dayEnd: useCustom ? parsed.data.dayEnd || "18:00" : null,
+    weekdays: useCustom
+      ? (parsed.data.weekdays ?? "").trim() || "1,2,3,4,5"
+      : null,
     active: parsed.data.active ?? true,
   };
 
@@ -70,24 +103,19 @@ export async function POST(req: Request) {
         return prisma.meetingRoom.update({
           where: { id: existing.id },
           data,
+          include: { types: { select: { typeId: true } } },
         });
       })()
     : await prisma.meetingRoom.create({
         data: { adminId, ...data },
+        include: { types: { select: { typeId: true } } },
       });
 
   if (!room) {
     return NextResponse.json({ error: "Sala non trovata" }, { status: 404 });
   }
 
-  return NextResponse.json({
-    room: {
-      id: room.id,
-      name: room.name,
-      mapPlaceName: room.mapPlaceName,
-      active: room.active,
-    },
-  });
+  return NextResponse.json({ room: serializeRoom(room) });
 }
 
 const patchSchema = z.object({

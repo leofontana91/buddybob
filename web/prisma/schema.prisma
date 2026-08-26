@@ -96,6 +96,8 @@ model RobotSettings {
   dayStart          String @default("09:00")
   dayEnd            String @default("18:00")
   slotMinutes       Int    @default(30)
+  /// Giorni prenotabili ISO 1=lun … 7=dom (default lun–ven)
+  bookableWeekdays  String @default("1,2,3,4,5")
   /// PIN to unlock robot on-device settings
   settingsPin       String @default("1234")
   /// shared | per_place | groups — come si configurano frasi e media dei punti mappa
@@ -182,6 +184,11 @@ model MeetingRoom {
   name          String
   /// Nome MapPlace sul robot per accompagnare l'ospite (se presente)
   mapPlaceName  String?
+  /// Orari propri (null = usa orari globali del robot)
+  dayStart      String?
+  dayEnd        String?
+  /// Giorni prenotabili ISO 1=lun … 7=dom, es. "1,2,3,4,5". Null = globali
+  weekdays      String?
   active        Boolean  @default(true)
   sortOrder     Int      @default(0)
   createdAt     DateTime @default(now())
