@@ -163,8 +163,9 @@ export default function SpeechModulePage() {
         <h2 className="font-semibold">Intelligenza</h2>
         {aiConfigured ? (
           <p className="text-sm">
-            OpenAI collegata ({model}). I comandi naturali usano l&apos;AI più le
-            istruzioni qui sotto; senza AI restano le regole di base.
+            OpenAI collegata ({model}). Bob può anche cercare online (meteo,
+            notizie, curiosità, fatti aggiornati) e rispondere a voce; i moduli
+            robot restano guidati dalle istruzioni qui sotto.
           </p>
         ) : (
           <p className="text-sm text-[var(--bob-muted)]">

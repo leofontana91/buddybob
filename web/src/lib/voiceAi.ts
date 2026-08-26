@@ -16,10 +16,41 @@ import {
   speechPhrases,
   type SpeechLanguageCode,
 } from "./speechLanguage";
+import { formatSearchForModel, searchWeb } from "./webSearch";
 
 export type VoiceAiOutcome = VoiceResult & {
   /** L'ospite ha cambiato argomento in modo netto → azzerare la memoria. */
   newTopic?: boolean;
+};
+
+const WEB_SEARCH_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "web_search",
+    description:
+      "Search the public internet for up-to-date facts: news, weather, sports, people, companies, science, culture, how-to, definitions, prices, events, general knowledge. Use whenever the answer needs external or current information beyond the robot catalog. Do NOT use for opening robot modules or going to map places.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Short search query (guest language or English)",
+        },
+      },
+      required: ["query"],
+    },
+  },
+};
+
+type ChatMessage = {
+  role: "system" | "user" | "assistant" | "tool";
+  content: string | null;
+  tool_calls?: {
+    id: string;
+    type: "function";
+    function: { name: string; arguments: string };
+  }[];
+  tool_call_id?: string;
 };
 
 export async function resolveVoiceWithAi(args: {
@@ -50,8 +81,9 @@ export async function resolveVoiceWithAi(args: {
     catalog.modulesDisabled.length > 0
       ? catalog.modulesDisabled.map((m) => `${m.id} (${m.label})`).join(", ")
       : "(nessuno)";
+  const webSearchEnabled = process.env.VOICE_WEB_SEARCH?.trim() !== "0";
 
-  const system = `You are BOB, a robot receptionist. Help with robot modules AND small talk with the guest.
+  const system = `You are BOB, a robot receptionist. Help with robot modules AND answer many guest questions (small talk + real-world info).
 
 ALWAYS speak and write the "speak" field in ${langName} (${speechLanguageMeta(lang).bcp47}). Never switch language unless the guest explicitly asks.
 
@@ -76,12 +108,18 @@ Fixed rules:
 - If the guest wants to record an audio/memo and voiceMemos is enabled: speak «${pack.voiceMemosOpen}» and actions [{"type":"open","module":"voiceMemos"}]. Do not start recording yourself.
 - If the guest says they have an appointment (today / check-in) and appointments is enabled: ask who they are in ${langName} and actions [{"type":"open","module":"appointmentsToday"}].
 - For generic «open appointments» (if enabled): module «appointments».
-- Free conversation OK: time, date, greetings, short jokes, chat → speak and actions [].
-- Live weather/news: you have no data → say so briefly, actions [].
+- Free conversation OK: greetings, jokes, chat → speak and actions [].
+${
+  webSearchEnabled
+    ? `- You CAN look things up with the web_search tool for weather, news, sports, people, companies, science, culture, definitions, how-to, current events, and other general knowledge.
+- Call web_search when you need fresh or external facts. After results, answer briefly in speak (1–3 short sentences, TTS-friendly). Do not read URLs aloud. If search fails, say you are not sure.
+- Do NOT use web_search for robot navigation, opening modules, or map places.`
+    : `- Live weather/news: you have no live web access → say so briefly, actions [].`
+}
 - goto ONLY if goToEnabled and an explicit request to go to a place in places.
 - In chat with «go/let's go» without a clear destination: do NOT goto.
 - Do not invent map points. No actions on disabled modules.
-- speak MUST be in ${langName}.
+- speak MUST be in ${langName}, concise for spoken robot TTS.
 - If speak is a question (even after a greeting), ALWAYS end with "?". Statements without "?".
 ${
   custom
@@ -99,14 +137,13 @@ ${custom}
     places: catalog.places,
   });
 
-  const messages: { role: "system" | "user" | "assistant"; content: string }[] =
-    [
-      { role: "system", content: system },
-      {
-        role: "system",
-        content: `Robot catalog (modules and places):\n${catalogBlock}`,
-      },
-    ];
+  const messages: ChatMessage[] = [
+    { role: "system", content: system },
+    {
+      role: "system",
+      content: `Robot catalog (modules and places):\n${catalogBlock}`,
+    },
+  ];
 
   for (const m of history) {
     messages.push({ role: m.role, content: m.content });
@@ -118,29 +155,11 @@ ${custom}
   });
 
   try {
-    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.45,
-        max_tokens: 450,
-        response_format: { type: "json_object" },
-        messages,
-      }),
-    });
-    if (!resp.ok) {
-      const err = await resp.text().catch(() => "");
-      console.error("[voice-ai]", resp.status, err.slice(0, 300));
-      return null;
-    }
-    const data = (await resp.json()) as {
-      choices?: { message?: { content?: string } }[];
-    };
-    const content = data.choices?.[0]?.message?.content ?? "";
+    const content = webSearchEnabled
+      ? await completeWithOptionalWebSearch({ key, model, messages })
+      : await completeJsonOnly({ key, model, messages });
+
+    if (!content) return null;
     const parsed = parseVoiceAiJson(content);
     if (!parsed) return null;
     const sanitized = sanitizeVoiceResult(
@@ -164,6 +183,126 @@ ${custom}
     console.error("[voice-ai]", e);
     return null;
   }
+}
+
+async function completeJsonOnly(args: {
+  key: string;
+  model: string;
+  messages: ChatMessage[];
+}): Promise<string | null> {
+  const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${args.key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: args.model,
+      temperature: 0.45,
+      max_tokens: 450,
+      response_format: { type: "json_object" },
+      messages: args.messages,
+    }),
+  });
+  if (!resp.ok) {
+    const err = await resp.text().catch(() => "");
+    console.error("[voice-ai]", resp.status, err.slice(0, 300));
+    return null;
+  }
+  const data = (await resp.json()) as {
+    choices?: { message?: { content?: string } }[];
+  };
+  return data.choices?.[0]?.message?.content ?? null;
+}
+
+/**
+ * Primo giro: può chiamare web_search.
+ * Secondo giro (dopo tool): JSON finale senza tool.
+ */
+async function completeWithOptionalWebSearch(args: {
+  key: string;
+  model: string;
+  messages: ChatMessage[];
+}): Promise<string | null> {
+  const messages = [...args.messages];
+
+  const first = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${args.key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: args.model,
+      temperature: 0.35,
+      max_tokens: 500,
+      tools: [WEB_SEARCH_TOOL],
+      tool_choice: "auto",
+      messages,
+    }),
+  });
+  if (!first.ok) {
+    const err = await first.text().catch(() => "");
+    console.error("[voice-ai] tools", first.status, err.slice(0, 300));
+    // Fallback senza tool
+    return completeJsonOnly(args);
+  }
+
+  const firstData = (await first.json()) as {
+    choices?: {
+      message?: {
+        content?: string | null;
+        tool_calls?: ChatMessage["tool_calls"];
+      };
+      finish_reason?: string;
+    }[];
+  };
+  const firstMsg = firstData.choices?.[0]?.message;
+  const toolCalls = firstMsg?.tool_calls?.filter(
+    (t) => t.function?.name === "web_search"
+  );
+
+  if (!toolCalls?.length) {
+    // Nessuna ricerca: se ha già JSON usalo, altrimenti forza JSON
+    const direct = firstMsg?.content?.trim() ?? "";
+    if (direct.startsWith("{")) return direct;
+    return completeJsonOnly({ ...args, messages });
+  }
+
+  messages.push({
+    role: "assistant",
+    content: firstMsg?.content ?? null,
+    tool_calls: toolCalls,
+  });
+
+  // Max 2 ricerche per turno (latenza voce)
+  for (const call of toolCalls.slice(0, 2)) {
+    let query = "";
+    try {
+      const parsed = JSON.parse(call.function.arguments || "{}") as {
+        query?: string;
+      };
+      query = (parsed.query ?? "").trim();
+    } catch {
+      query = "";
+    }
+    const result = query
+      ? await searchWeb(query)
+      : { query: "", summary: "", hits: [] };
+    messages.push({
+      role: "tool",
+      tool_call_id: call.id,
+      content: formatSearchForModel(result),
+    });
+  }
+
+  messages.push({
+    role: "system",
+    content:
+      "Using any web_search results above, reply NOW with ONLY the final JSON object (speak + actions + newTopic). Keep speak short for TTS.",
+  });
+
+  return completeJsonOnly({ ...args, messages });
 }
 
 /** Data/ora corrente formattata nella lingua del parlato. */
