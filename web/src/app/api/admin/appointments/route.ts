@@ -138,7 +138,7 @@ export async function POST(req: Request) {
   }
 
   const adminId = effectiveAdminId(session);
-  let hostUserId = parsed.data.hostUserId || parsed.data.userId || null;
+  const hostUserId = parsed.data.hostUserId || parsed.data.userId || null;
   if (hostUserId && adminId) {
     const host = await prisma.account.findFirst({
       where: { id: hostUserId, role: "USER", adminId },
@@ -149,7 +149,7 @@ export async function POST(req: Request) {
   }
 
   let durationMinutes = 30;
-  let typeId = parsed.data.typeId || null;
+  const typeId = parsed.data.typeId || null;
   if (typeId && adminId) {
     const type = await prisma.appointmentType.findFirst({
       where: { id: typeId, adminId, active: true },
@@ -175,7 +175,7 @@ export async function POST(req: Request) {
     durationMinutes = settings?.slotMinutes ?? 30;
   }
 
-  let roomId = parsed.data.roomId || null;
+  const roomId = parsed.data.roomId || null;
   if (roomId && adminId) {
     const room = await prisma.meetingRoom.findFirst({
       where: { id: roomId, adminId, active: true },
