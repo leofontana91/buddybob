@@ -18,18 +18,30 @@ export async function GET(req: Request) {
   }
 
   const unreadOnly = url.searchParams.get("unread") === "1";
+  const includeAllChannels = url.searchParams.get("allChannels") === "1";
 
   const alerts = await prisma.operatorAlert.findMany({
     where: {
       robotId,
       ...(unreadOnly ? { readAt: null } : {}),
+      ...(includeAllChannels ? {} : { inInbox: true }),
     },
     orderBy: { createdAt: "desc" },
     take: 50,
   });
 
   const unreadCount = await prisma.operatorAlert.count({
-    where: { robotId, readAt: null },
+    where: { robotId, readAt: null, inInbox: true },
+  });
+
+  const popups = await prisma.operatorAlert.findMany({
+    where: {
+      robotId,
+      readAt: null,
+      asPopup: true,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 5,
   });
 
   return NextResponse.json({
@@ -39,7 +51,15 @@ export async function GET(req: Request) {
       type: a.type,
       message: a.message,
       appointmentId: a.appointmentId,
+      inInbox: a.inInbox,
+      asPopup: a.asPopup,
       readAt: a.readAt?.toISOString() ?? null,
+      createdAt: a.createdAt.toISOString(),
+    })),
+    popups: popups.map((a) => ({
+      id: a.id,
+      type: a.type,
+      message: a.message,
       createdAt: a.createdAt.toISOString(),
     })),
   });

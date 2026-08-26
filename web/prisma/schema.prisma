@@ -93,6 +93,12 @@ model RobotSettings {
   bookingUrl        String @default("")
   checkInSpeak      String @default("Perfetto, ho avvisato che sei arrivato")
   callOperatorSpeak String @default("Sto chiamando un operatore")
+  /// Canali notifica «Chiama operatore»
+  callOperatorNotifyInbox Boolean @default(true)
+  callOperatorNotifyPopup Boolean @default(false)
+  callOperatorNotifyEmail Boolean @default(false)
+  /// Destinatario email (obbligatorio se notifyEmail)
+  callOperatorEmail     String  @default("")
   dayStart          String @default("09:00")
   dayEnd            String @default("18:00")
   slotMinutes       Int    @default(30)
@@ -126,6 +132,38 @@ model RobotSettings {
   idleMediaIntervalSec Int  @default(20)
   /// person = si interrompe se vede qualcuno; tap = solo al tocco monitor
   idleMediaStopMode  String @default("person")
+
+  /// Rubrica ospiti attiva su questo robot / console
+  rubricaEnabled       Boolean @default(true)
+  rubricaCollectPhone  Boolean @default(true)
+  rubricaCollectEmail  Boolean @default(true)
+  rubricaCollectCompany Boolean @default(false)
+  rubricaCollectNotes  Boolean @default(true)
+
+  /// Sync calendari esterni: none | ical | google | teams
+  calendarSyncProvider String @default("none")
+  calendarSyncEnabled  Boolean @default(false)
+  /// URL feed iCal (Google «indirizzo segreto», Outlook ICS, ecc.)
+  calendarSyncIcalUrl  String @default("")
+  calendarLastSyncAt   DateTime?
+}
+
+/// Contatto ospite in rubrica (per azienda)
+model GuestContact {
+  id        String   @id @default(cuid())
+  adminId   String
+  name      String
+  phone     String   @default("")
+  email     String   @default("")
+  company   String   @default("")
+  notes     String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastSeenAt DateTime?
+
+  @@index([adminId, name])
+  @@index([adminId, phone])
+  @@index([adminId, email])
 }
 
 model Appointment {
@@ -150,10 +188,14 @@ model Appointment {
   /// scheduled | checked_in | in_progress | completed | cancelled | no_show
   status     String   @default("scheduled")
   notes      String?
+  /// Id evento esterno (Google / Teams / iCal) per sync senza duplicati
+  externalId     String?
+  externalSource String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   alerts     OperatorAlert[]
 
+  @@unique([robotId, externalSource, externalId])
   @@index([robotId, startsAt])
   @@index([userId, startsAt])
   @@index([hostUserId, startsAt])
@@ -218,6 +260,10 @@ model OperatorAlert {
   message       String
   appointmentId String?
   appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  /// Mostra in Inbox
+  inInbox       Boolean      @default(true)
+  /// Mostra popup immediato nella console admin
+  asPopup       Boolean      @default(false)
   readAt        DateTime?
   createdAt     DateTime     @default(now())
 

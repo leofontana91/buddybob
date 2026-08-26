@@ -15,6 +15,7 @@ import {
   startOfWeek,
 } from "date-fns";
 import { it } from "date-fns/locale";
+import Link from "next/link";
 import { useRobot } from "@/components/AdminShell";
 
 type Appt = {
@@ -288,22 +289,24 @@ export default function CalendarPage() {
   }
 
   return (
-    <div className="space-y-4 px-5 py-8 sm:px-8 lg:px-[34px] lg:py-[30px]">
+    <div className="mx-auto max-w-5xl space-y-3 px-5 py-6 sm:px-8 lg:px-10 lg:py-7">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="bob-eyebrow">Agenda</p>
-          <h1 className="bob-page-title mt-2 capitalize">{title}</h1>
+          <h1 className="mt-1.5 font-[family-name:var(--font-poppins)] text-[26px] font-semibold tracking-[-0.03em] capitalize">
+            {title}
+          </h1>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-xl border border-[var(--bob-line)] overflow-hidden">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex rounded-full border border-[var(--bob-line)] overflow-hidden bg-white">
             {(["month", "week", "day"] as ViewMode[]).map((v) => (
               <button
                 key={v}
                 type="button"
-                className={`px-3 py-2 text-sm ${
+                className={`px-2.5 py-1.5 text-[12px] whitespace-nowrap ${
                   view === v
                     ? "bg-[var(--bob-ink)] text-white"
-                    : "bg-white text-[var(--bob-ink)]"
+                    : "text-[var(--bob-ink)]"
                 }`}
                 onClick={() => setView(v)}
               >
@@ -313,32 +316,38 @@ export default function CalendarPage() {
           </div>
           <button
             type="button"
-            className="bob-btn-secondary px-3 py-2 text-sm"
+            className="bob-btn-secondary !px-2.5 !py-1.5 !text-[12px]"
             onClick={() => shift(-1)}
           >
             ←
           </button>
           <button
             type="button"
-            className="bob-btn-secondary px-3 py-2 text-sm"
+            className="bob-btn-secondary !px-2.5 !py-1.5 !text-[12px]"
             onClick={() => setAnchor(new Date())}
           >
             Oggi
           </button>
           <button
             type="button"
-            className="bob-btn-secondary px-3 py-2 text-sm"
+            className="bob-btn-secondary !px-2.5 !py-1.5 !text-[12px]"
             onClick={() => shift(1)}
           >
             →
           </button>
           <button
             type="button"
-            className="bob-btn px-4 py-2 text-sm"
+            className="bob-btn !px-3.5 !py-1.5 !text-[11px]"
             onClick={() => openCreate()}
           >
             Nuovo
           </button>
+          <Link
+            href="/admin/impostazioni"
+            className="bob-btn-secondary !px-2.5 !py-1.5 !text-[12px]"
+          >
+            Sync
+          </Link>
         </div>
       </div>
 
@@ -369,7 +378,7 @@ export default function CalendarPage() {
                     setView("day");
                   }}
                   onDoubleClick={() => openCreate(day)}
-                  className={`min-h-[110px] border-b border-r border-[var(--bob-line)] p-1.5 text-left align-top ${
+                  className={`min-h-[72px] border-b border-r border-[var(--bob-line)] p-1 text-left align-top ${
                     inMonth ? "bg-white" : "bg-zinc-50 text-zinc-400"
                   } ${today ? "ring-2 ring-inset ring-[var(--bob-ink)]" : ""}`}
                 >
@@ -405,15 +414,15 @@ export default function CalendarPage() {
       ) : null}
 
       {view === "week" || view === "day" ? (
-        <div className="bob-card overflow-x-auto">
+        <div className="bob-card max-h-[min(62vh,640px)] overflow-auto">
           <div
-            className="min-w-[720px]"
+            className="min-w-[640px]"
             style={{
               display: "grid",
               gridTemplateColumns:
                 view === "day"
-                  ? "56px 1fr"
-                  : `56px repeat(${weekDays.length}, minmax(0, 1fr))`,
+                  ? "48px 1fr"
+                  : `48px repeat(${weekDays.length}, minmax(0, 1fr))`,
             }}
           >
             <div className="border-b border-[var(--bob-line)]" />
@@ -444,7 +453,7 @@ export default function CalendarPage() {
 
             {HOURS.map((hour) => (
               <div key={`row-${hour}`} className="contents">
-                <div className="border-b border-[var(--bob-line)] px-1 py-0 text-[11px] text-[var(--bob-muted)] h-16 flex items-start justify-end pt-1">
+                <div className="border-b border-[var(--bob-line)] px-1 py-0 text-[10px] text-[var(--bob-muted)] h-11 flex items-start justify-end pt-0.5">
                   {String(hour).padStart(2, "0")}:00
                 </div>
                 {(view === "day" ? [anchor] : weekDays).map((day) => {
@@ -456,7 +465,7 @@ export default function CalendarPage() {
                   return (
                     <div
                       key={`${key}-${hour}`}
-                      className="relative border-b border-l border-[var(--bob-line)] h-16 p-0.5 hover:bg-zinc-50 cursor-pointer"
+                      className="relative border-b border-l border-[var(--bob-line)] h-11 p-0.5 hover:bg-zinc-50 cursor-pointer"
                       onClick={() => openCreate(day, hour)}
                     >
                       <div className="space-y-0.5 absolute inset-0.5 overflow-hidden">

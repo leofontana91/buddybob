@@ -158,3 +158,32 @@ export async function sendFormSubmissionEmail(opts: {
 
   return sendResendEmail({ to, subject, text });
 }
+
+export async function sendOperatorCallEmail(opts: {
+  to: string;
+  robotName: string;
+  message: string;
+  createdAt?: Date;
+}): Promise<{ sent: boolean; mailError?: string }> {
+  const to = opts.to.trim();
+  if (!to || !to.includes("@")) {
+    return { sent: false, mailError: "Email destinazione non valida" };
+  }
+  const when = (opts.createdAt ?? new Date()).toLocaleString("it-IT", {
+    timeZone: "Europe/Rome",
+  });
+  const subject = `BOB · Richiesta operatore (${opts.robotName})`;
+  const text = [
+    "Un ospite ha chiesto un operatore al robot.",
+    "",
+    `Robot: ${opts.robotName}`,
+    `Messaggio: ${opts.message}`,
+    `Quando: ${when}`,
+    "",
+    "Apri la console BOB → Inbox per gestirla.",
+    "",
+    "— BOB Robotics",
+  ].join("\n");
+
+  return sendResendEmail({ to, subject, text });
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRobot } from "@/components/AdminShell";
 import {
@@ -86,7 +87,6 @@ export default function ReceptionModulePage() {
   const { robotId } = useRobot();
   const [displayName, setDisplayName] = useState("");
   const [settingsPin, setSettingsPin] = useState("1234");
-  const [callOperatorSpeak, setCallOperatorSpeak] = useState("");
   const [welcomeSpeak, setWelcomeSpeak] = useState("Benvenuto");
   const [howCanIHelpSpeak, setHowCanIHelpSpeak] = useState(
     "Come posso aiutarti?"
@@ -114,7 +114,6 @@ export default function ReceptionModulePage() {
       const s = data.settings ?? {};
       setDisplayName(data.displayName ?? "");
       setSettingsPin(s.settingsPin ?? "1234");
-      setCallOperatorSpeak(s.callOperatorSpeak ?? "");
       setWelcomeSpeak(s.welcomeSpeak ?? "Benvenuto");
       setHowCanIHelpSpeak(s.howCanIHelpSpeak ?? "Come posso aiutarti?");
       setCooldownSec(s.receptionCooldownSec ?? 45);
@@ -155,7 +154,6 @@ export default function ReceptionModulePage() {
         robotId,
         displayName,
         settingsPin,
-        callOperatorSpeak,
         welcomeSpeak,
         howCanIHelpSpeak,
         receptionCooldownSec: cooldownSec,
@@ -227,14 +225,13 @@ export default function ReceptionModulePage() {
               required
             />
           </label>
-          <label className="block text-sm font-medium">
-            Frase «chiama operatore»
-            <input
-              className="mt-1 w-full bob-input"
-              value={callOperatorSpeak}
-              onChange={(e) => setCallOperatorSpeak(e.target.value)}
-            />
-          </label>
+          <p className="text-sm text-[var(--bob-muted)]">
+            Frase e canali di «Chiama operatore» si configurano in{" "}
+            <Link className="bob-link" href="/admin/modules/operator">
+              Impostazioni → Chiama operatore
+            </Link>
+            .
+          </p>
         </section>
 
         <section className="space-y-4 border-t border-[var(--bob-line)] pt-6">

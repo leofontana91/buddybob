@@ -42,7 +42,7 @@ export default async function AdminLayout({
         { href: "/admin", label: "Oggi" },
         { href: "/admin/agenda", label: "Agenda" },
         { href: "/admin/rubrica", label: "Rubrica" },
-        { href: "/admin/robot", label: "Robot" },
+        { href: "/admin/impostazioni", label: "Impostazioni" },
         { href: "/admin/inbox", label: "Inbox", badgeKey: "inbox" },
       ]}
     >

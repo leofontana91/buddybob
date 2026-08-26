@@ -72,6 +72,10 @@ export function AdminShell({
     useState<RobotPresenceState>("offline");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [popupAlert, setPopupAlert] = useState<{
+    id: string;
+    message: string;
+  } | null>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
 
@@ -115,6 +119,12 @@ export function AdminShell({
       if (aRes.ok) {
         const data = await aRes.json();
         setUnread(data.unreadCount ?? 0);
+        const next = (data.popups as { id: string; message: string }[] | undefined)?.[0];
+        if (next) {
+          setPopupAlert((prev) =>
+            prev?.id === next.id ? prev : { id: next.id, message: next.message }
+          );
+        }
       }
       if (sRes.ok) {
         const data = await sRes.json();
@@ -190,6 +200,17 @@ export function AdminShell({
     router.replace("/super");
   }
 
+  async function dismissPopup() {
+    if (!popupAlert) return;
+    const id = popupAlert.id;
+    setPopupAlert(null);
+    await fetch("/api/admin/alerts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: [id] }),
+    });
+  }
+
   function isActive(href: string) {
     if (href === "/admin" || href === "/super" || href === "/me") {
       return pathname === href;
@@ -203,7 +224,8 @@ export function AdminShell({
     pathname === "/super" ||
     pathname.startsWith("/admin/agenda") ||
     pathname.startsWith("/admin/calendar") ||
-    pathname.startsWith("/admin/robot");
+    pathname.startsWith("/admin/robot") ||
+    pathname.startsWith("/admin/impostazioni");
 
   return (
     <Ctx.Provider value={value}>
@@ -331,6 +353,43 @@ export function AdminShell({
             </div>
           )}
         </main>
+
+        {popupAlert ? (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-4"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="bob-op-popup-title"
+          >
+            <div className="w-full max-w-md rounded-[22px] bg-white p-6 shadow-[var(--bob-shadow-card)]">
+              <p className="bob-eyebrow">Chiama operatore</p>
+              <h2
+                id="bob-op-popup-title"
+                className="mt-2 font-[family-name:var(--font-poppins)] text-[24px] font-semibold tracking-[-0.03em]"
+              >
+                Serve qualcuno in reception
+              </h2>
+              <p className="mt-3 text-[15px] text-[var(--bob-text-2)]">
+                {popupAlert.message}
+              </p>
+              <div className="mt-6 flex flex-wrap gap-2">
+                <button type="button" className="bob-btn" onClick={dismissPopup}>
+                  Ci penso io
+                </button>
+                <button
+                  type="button"
+                  className="bob-btn-secondary"
+                  onClick={() => {
+                    dismissPopup();
+                    router.push("/admin/inbox");
+                  }}
+                >
+                  Apri Inbox
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </Ctx.Provider>
   );
