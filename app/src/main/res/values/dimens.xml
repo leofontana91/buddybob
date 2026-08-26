@@ -27,4 +27,5 @@
     <dimen name="logo_size">48dp</dimen>
     <dimen name="input_height">52dp</dimen>
     <dimen name="greeting_text">36sp</dimen>
+    <dimen name="system_status_bar_height">32dp</dimen>
 </resources>

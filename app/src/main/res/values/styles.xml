@@ -9,10 +9,11 @@
         <item name="android:textColor">@color/bob_black</item>
         <!-- Su OrionStar le icone di sistema (batteria, ora…) restano chiare:
              la status bar deve essere scura, altrimenti spariscono sul beige. -->
-        <item name="android:statusBarColor">@color/bob_black</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@color/bob_black</item>
         <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowTranslucentStatus">false</item>
     </style>
 
     <!-- Secondary: soft surface + hairline -->

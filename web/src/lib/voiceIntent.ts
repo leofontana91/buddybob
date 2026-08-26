@@ -109,189 +109,95 @@ function enabledOpenModules(modules: AdminModules) {
   return OPEN_MODULES.filter((m) => modules[m.flag]);
 }
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Match del punto come parola/frase intera, non come sottostringa («a» in «stai»). */
+function hasWholePhrase(haystack: string, phrase: string): boolean {
+  if (!phrase) return false;
+  return new RegExp(`(?:^|\\s)${escapeRegExp(phrase)}(?:\\s|$)`).test(haystack);
+}
+
+function placeCandidates(p: VoicePlace): string[] {
+  return [p.name, p.label ?? ""]
+    .map(normalizeUtterance)
+    .filter(Boolean);
+}
+
+/** Punti usabili dalla voce: esclude nomi/etichette troppo corti (es. «a»). */
+export function placesForVoiceAi(places: VoicePlace[]): VoicePlace[] {
+  return places.filter((p) =>
+    placeCandidates(p).some((c) => c.length >= 3)
+  );
+}
+
+/**
+ * Trova un punto mappa citato nell'utterance.
+ * Nomi corti (es. «a») matchano SOLO come parola intera, mai come lettera dentro altre parole.
+ */
 export function matchPlaceName(
   utterance: string,
   places: VoicePlace[]
 ): string | null {
   const n = normalizeUtterance(utterance);
   if (!n || places.length === 0) return null;
+  const words = n.split(" ").filter(Boolean);
 
   let best: { name: string; score: number } | null = null;
   for (const p of places) {
-    const candidates = [p.name, p.label ?? ""]
-      .map(normalizeUtterance)
-      .filter(Boolean);
-    for (const c of candidates) {
-      if (!c) continue;
+    for (const c of placeCandidates(p)) {
       let score = 0;
-      if (n === c) score = 100;
-      else if (n.includes(c)) score = 80 + Math.min(c.length, 19);
-      else if (c.includes(n) && n.length >= 3) score = 50 + n.length;
-      else {
-        const words = n.split(" ");
-        if (words.some((w) => w.length >= 3 && (c.includes(w) || w.includes(c)))) {
-          score = 40 + Math.min(c.length, 10);
+      if (n === c) {
+        score = 100;
+      } else if (c.length >= 3 && hasWholePhrase(n, c)) {
+        score = 80 + Math.min(c.length, 19);
+      } else if (c.length >= 5 && n.includes(c)) {
+        score = 55 + Math.min(c.length, 10);
+      } else if (c.length >= 3 && c.includes(n) && n.length >= 4) {
+        score = 50 + Math.min(n.length, 20);
+      } else if (c.length >= 3) {
+        if (
+          words.some(
+            (w) => w.length >= 4 && (c === w || c.includes(w))
+          )
+        ) {
+          score = 42 + Math.min(c.length, 10);
         }
+      } else if (words.includes(c) && words.length <= 2) {
+        // Nome 1–2 caratteri: solo frase brevissima tipo «a» / «vai a»
+        score = 90;
       }
       if (score > 0 && (!best || score > best.score)) {
         best = { name: p.name, score };
       }
     }
   }
-  return best && best.score >= 40 ? best.name : null;
+  return best && best.score >= 42 ? best.name : null;
 }
 
-function extractGotoTarget(normalized: string): string | null {
-  const patterns = [
-    /(?:accompagnami|portami|accompagnare|portare)\s+(?:a|al|alla|in|nel|nella|lo|la)?\s*(.+)$/,
-    /(?:vai|andiamo|voglio andare|vorrei andare|dimmi di andare)\s+(?:a|al|alla|in|nel|nella)?\s*(.+)$/,
-    /(?:porta|accompagna)\s+(?:mi\s+)?(?:a|al|alla|in|nel|nella)?\s*(.+)$/,
-  ];
-  for (const re of patterns) {
-    const m = normalized.match(re);
-    if (m?.[1]?.trim()) return m[1].trim();
-  }
-  return null;
+/** True se l'utente ha davvero citato quel punto (parola intera). */
+export function utteranceMentionsPlace(
+  utterance: string,
+  placeName: string,
+  places: VoicePlace[]
+): boolean {
+  const n = normalizeUtterance(utterance);
+  const p = places.find((x) => x.name === placeName);
+  if (!p || !n) return false;
+  return placeCandidates(p).some((c) => {
+    if (c.length < 3) return hasWholePhrase(n, c);
+    return hasWholePhrase(n, c) || (c.length >= 5 && n.includes(c));
+  });
 }
 
-/** Deterministic Italian intents when AI is off or fails. */
+/** @deprecated Le API voce usano solo l’AI. */
 export function resolveVoiceRules(args: {
   text: string;
   places: VoicePlace[];
   modules: AdminModules;
 }): VoiceResult | null {
-  const n = normalizeUtterance(args.text);
-  if (n.length < 2) return null;
-
-  const timeAsk =
-    /\b(che ore sono|che ora e|che ora|dimmi l ora|dimmi lora|orario|che giorno e|che giorno|che data)\b/.test(
-      n
-    ) || n === "ora" || n === "orario";
-  if (timeAsk) {
-    return {
-      speak: speakNowItaly(n.includes("giorno") || n.includes("data")),
-      actions: [],
-      source: "rules",
-    };
-  }
-
-  if (
-    /\b(ferma|stop|basta|fermati|arresta)\b/.test(n) ||
-    n === "stop" ||
-    n === "ferma"
-  ) {
-    return {
-      speak: "Ok, mi fermo.",
-      actions: [{ type: "stop" }],
-      source: "rules",
-    };
-  }
-
-  if (
-    /\b(menu|accoglienza|torna indietro|indietro|home|inizio)\b/.test(n)
-  ) {
-    return {
-      speak: "Torno al menu.",
-      actions: [{ type: "menu" }],
-      source: "rules",
-    };
-  }
-
-  // «Ho un appuntamento» → lista di oggi + chiede chi sei
-  if (args.modules.appointments) {
-    const hasAppt =
-      /\b(ho un appuntamento|ho appuntamento|sono in agenda|sono qui per un appuntamento|check in|checkin)\b/.test(
-        n
-      ) ||
-      (/\bappuntamento\b/.test(n) &&
-        /\b(oggi|adesso|ora|mio|mia)\b/.test(n));
-    if (hasAppt) {
-      return {
-        speak: "Perfetto. Chi sei? Tocca il tuo nome sulla lista.",
-        actions: [{ type: "open", module: "appointmentsToday" }],
-        source: "rules",
-      };
-    }
-  }
-
-  // «Registra questo audio» → apre memo e aspetta il tap su Inizia
-  if (args.modules.voiceMemos) {
-    const wantRecord =
-      /\b(registra (questo )?audio|registra un audio|registra (un )?memo|registrami|inizia a registrare|voglio registrare)\b/.test(
-        n
-      ) ||
-      (/\bregistr/.test(n) && /\b(audio|memo|messaggio)\b/.test(n));
-    if (wantRecord) {
-      return {
-        speak:
-          "Apro i memo vocali. Tocca Inizia a registrare quando sei pronto.",
-        actions: [{ type: "open", module: "voiceMemos" }],
-        source: "rules",
-      };
-    }
-  }
-
-  // Apri moduli / chiama operatore
-  for (const mod of enabledOpenModules(args.modules)) {
-    const hit = mod.phrases.some((p) => n.includes(normalizeUtterance(p)));
-    if (!hit) continue;
-    const isCall = mod.id === "callOperator";
-    const explicitOpen =
-      /\b(apri|aprire|mostra|apriamo|voglio|vorrei|fammi)\b/.test(n) ||
-      n === normalizeUtterance(mod.phrases[0] ?? "");
-    if (!isCall && !explicitOpen && !/\b(appuntament|document|gioch|memo|access|parla con me)\b/.test(n)) {
-      continue;
-    }
-    if (isCall && !/\b(chiama|chiamare|operat|aiuto|qualcuno|persona)\b/.test(n)) {
-      continue;
-    }
-    const label = MODULE_LABELS[mod.flag] ?? mod.id;
-    return {
-      speak: isCall ? "Chiamo un operatore." : `Apro ${label}.`,
-      actions: [{ type: "open", module: mod.id }],
-      source: "rules",
-    };
-  }
-
-  if (args.modules.goTo) {
-    const target = extractGotoTarget(n);
-    if (target) {
-      const place =
-        matchPlaceName(target, args.places) ||
-        matchPlaceName(n, args.places);
-      if (place) {
-        const label =
-          args.places.find((p) => p.name === place)?.label || place;
-        return {
-          speak: `Ok, ti accompagno a ${label}.`,
-          actions: [{ type: "goto", placeName: place, after: "stay" }],
-          source: "rules",
-        };
-      }
-      return {
-        speak: `Non trovo il punto «${target}» sulla mappa.`,
-        actions: [],
-        source: "rules",
-      };
-    }
-    // "sala riunioni" alone when goTo is on and matches a place
-    if (
-      !/\b(apri|appuntament|document|gioch|memo|access)\b/.test(n) &&
-      n.split(" ").length <= 5
-    ) {
-      const place = matchPlaceName(n, args.places);
-      if (place && n.length >= 4) {
-        const label =
-          args.places.find((p) => p.name === place)?.label || place;
-        return {
-          speak: `Ok, vado a ${label}.`,
-          actions: [{ type: "goto", placeName: place, after: "stay" }],
-          source: "rules",
-        };
-      }
-    }
-  }
-
+  void args;
   return null;
 }
 
@@ -309,7 +215,7 @@ export function voiceCatalog(args: {
       label: "Check-in appuntamento di oggi (lista nomi)",
     });
   }
-  const places = args.places.map((p) => ({
+  const places = placesForVoiceAi(args.places).map((p) => ({
     name: p.name,
     label: p.label || p.name,
   }));
@@ -366,20 +272,40 @@ function isVoiceAction(a: unknown): a is VoiceAction {
 export function sanitizeVoiceResult(
   result: VoiceResult,
   places: VoicePlace[],
-  modules: AdminModules
+  modules: AdminModules,
+  utterance?: string
 ): VoiceResult {
-  const placeNames = new Set(places.map((p) => p.name));
+  const usable = placesForVoiceAi(places);
+  const placeNames = new Set(usable.map((p) => p.name));
   const allowed = new Set(enabledOpenModules(modules).map((m) => m.id));
   const actions: VoiceAction[] = [];
+  const n = utterance ? normalizeUtterance(utterance) : "";
+  const explicitGoto = n
+    ? /\b(accompagnami|portami|voglio andare|vorrei andare)\b/.test(n) ||
+      (/\b(vai|andiamo)\b/.test(n) &&
+        /\b(a|al|alla|in|nel|nella)\b/.test(n) &&
+        n.split(/\s+/).length <= 8)
+    : false;
+
   for (const a of result.actions) {
     if (a.type === "goto") {
       if (!modules.goTo) continue;
-      const matched =
-        placeNames.has(a.placeName)
-          ? a.placeName
-          : matchPlaceName(a.placeName, places);
-      if (!matched) continue;
-      actions.push({ ...a, placeName: matched });
+      // Mai punti ambigui tipo «a»
+      if (!placeNames.has(a.placeName)) {
+        const matched = matchPlaceName(a.placeName, usable);
+        if (!matched) continue;
+        if (utterance && !utteranceMentionsPlace(utterance, matched, usable)) {
+          continue;
+        }
+        if (utterance && !explicitGoto) continue;
+        actions.push({ ...a, placeName: matched });
+        continue;
+      }
+      if (utterance) {
+        if (!utteranceMentionsPlace(utterance, a.placeName, usable)) continue;
+        if (!explicitGoto) continue;
+      }
+      actions.push(a);
     } else if (a.type === "open") {
       if (a.module === "appointmentsToday") {
         if (!modules.appointments) continue;
@@ -413,28 +339,4 @@ export function ensureItalianQuestionMark(speak: string): string {
 
 export function openaiConfigured(): boolean {
   return Boolean(process.env.OPENAI_API_KEY?.trim());
-}
-
-function speakNowItaly(wantDate: boolean): string {
-  const d = new Date();
-  try {
-    if (wantDate) {
-      const day = new Intl.DateTimeFormat("it-IT", {
-        timeZone: "Europe/Rome",
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-      }).format(d);
-      return `Oggi è ${day}.`;
-    }
-    const time = new Intl.DateTimeFormat("it-IT", {
-      timeZone: "Europe/Rome",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }).format(d);
-    return `Sono le ${time}.`;
-  } catch {
-    return "Non riesco a leggere l'orologio in questo momento.";
-  }
 }

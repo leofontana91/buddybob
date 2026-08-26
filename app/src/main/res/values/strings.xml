@@ -46,6 +46,8 @@
     <string name="voice_heard_label">Ho sentito</string>
     <string name="voice_said_label">Ho detto</string>
     <string name="voice_listening_hint">Ti ascolto — parla pure</string>
+    <string name="voice_wake_greeting">Ciao, sì sono io Bob. Come posso aiutarti?</string>
+    <string name="voice_stop">STOP</string>
     <string name="voice_mic_button">Parla con BOB</string>
     <string name="voice_moving_placeholder">Sto andando a %1$s</string>
     <string name="reception_idle_hint">BOB è qui — avvicinati o tocca lo schermo.\nDi\' «Bob» una volta e il comando, oppure tocca il microfono.</string>
@@ -131,6 +133,19 @@
     <string name="robot_settings_refresh_same">Già aggiornato</string>
     <string name="robot_settings_refresh_fail">Aggiornamento non riuscito: %1$s</string>
     <string name="robot_settings_unpaired">Robot non associato</string>
+
+    <string-array name="obstacle_phrases">
+        <item>Scusa, non riesco a passare.</item>
+        <item>Sto lavorando, puoi spostarti un attimo?</item>
+        <item>C\'è qualcosa davanti a me, mi aiuti?</item>
+        <item>Per favore, fammi spazio.</item>
+        <item>Non riesco ad andare avanti così.</item>
+        <item>Oh no, sono bloccato…</item>
+        <item>Scusa, potresti spostarti?</item>
+        <item>Devo passare di qui, grazie!</item>
+        <item>Aiuto, c\'è un ostacolo.</item>
+        <item>Aspetto che la strada sia libera.</item>
+    </string-array>
 
     <string name="docs_title">Documenti</string>
     <string name="docs_hint">Scegli il modulo da compilare</string>

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Barra di sistema custom: ora, wifi, batteria (icone nitide) -->
+<!-- Barra di sistema custom: a filo del bordo alto (paddingTop = inset se serve) -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/bar_system_status"
     android:layout_width="match_parent"
-    android:layout_height="32dp"
+    android:layout_height="@dimen/system_status_bar_height"
     android:background="@color/bob_black"
     android:gravity="center_vertical"
     android:orientation="horizontal"

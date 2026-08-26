@@ -6,8 +6,8 @@ import { prisma } from "@/lib/db";
 import { resolveVoiceWithAi } from "@/lib/voiceAi";
 import {
   openaiConfigured,
-  resolveVoiceRules,
   ensureItalianQuestionMark,
+  placesForVoiceAi,
   type VoicePlace,
 } from "@/lib/voiceIntent";
 import {
@@ -54,10 +54,13 @@ export async function POST(req: Request, ctx: Ctx) {
     where: { robotId: id },
     orderBy: { name: "asc" },
   });
-  const places: VoicePlace[] = mapPlaces.map((p) => ({
-    name: p.name,
-    label: p.label,
-  }));
+  // Nomi corti (es. «a») esclusi: non possono innescare goto
+  const places: VoicePlace[] = placesForVoiceAi(
+    mapPlaces.map((p) => ({
+      name: p.name,
+      label: p.label,
+    }))
+  );
 
   const settings = await prisma.robotSettings.findUnique({ where: { robotId: id } });
   const text = parsed.data.text;
@@ -68,39 +71,32 @@ export async function POST(req: Request, ctx: Ctx) {
   }
 
   const history = getVoiceHistory(id, sessionKey);
-  // Comandi chiari o orario/data: regole locali subito, senza attendere OpenAI.
-  const rulesHit = resolveVoiceRules({ text, places, modules });
-  const n = text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .replace(/[^a-z0-9\s]/gi, " ");
-  const clockOrDate =
-    /\b(che ore sono|che ora|orario|che giorno|che data)\b/.test(n) ||
-    n.trim() === "ora";
-  const fastPath =
-    rulesHit != null &&
-    (rulesHit.actions.length > 0 || clockOrDate);
 
-  const fromAi = fastPath
-    ? null
-    : await resolveVoiceWithAi({
-        text,
-        places,
-        modules,
-        instructions: settings?.voiceInstructions,
-        history,
-      });
-
-  const result =
-    (fastPath ? rulesHit : null) ??
-    fromAi ??
-    rulesHit ?? {
+  // Tutto dall’AI — niente regole locali goto/apri (evitano falsi «vado a a»)
+  if (!openaiConfigured()) {
+    return NextResponse.json({
       speak:
-        "Non ho capito. Puoi dire ad esempio «apri appuntamenti» o «accompagnami in reception».",
+        "La voce intelligente non è configurata. Imposta OPENAI_API_KEY sul server.",
       actions: [],
-      source: "rules" as const,
-    };
+      source: "rules",
+      aiConfigured: false,
+    });
+  }
+
+  const fromAi = await resolveVoiceWithAi({
+    text,
+    places,
+    modules,
+    instructions: settings?.voiceInstructions,
+    history,
+  });
+
+  const result = fromAi ?? {
+    speak:
+      "Non riesco a rispondere adesso. Riprova tra un momento.",
+    actions: [] as const,
+    source: "rules" as const,
+  };
 
   if (fromAi?.newTopic) {
     clearVoiceHistory(id, sessionKey);
@@ -112,7 +108,7 @@ export async function POST(req: Request, ctx: Ctx) {
     speak,
     actions: result.actions,
     source: result.source,
-    aiConfigured: openaiConfigured(),
+    aiConfigured: true,
     memoryTurns: getVoiceHistory(id, sessionKey).filter((m) => m.role === "user")
       .length,
     newTopic: fromAi?.newTopic === true,

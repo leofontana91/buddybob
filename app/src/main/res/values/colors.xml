@@ -8,6 +8,7 @@
     <color name="bob_navy">#0D2C50</color>
     <color name="bob_teal">#0A7A8C</color>
     <color name="bob_mic_listening">#1F9D55</color>
+    <color name="bob_mic_idle">#D70015</color>
     <color name="bob_cyan">#00B4FF</color>
     <color name="bob_muted">#6E6E73</color>
     <color name="bob_line">#E5E2DC</color>

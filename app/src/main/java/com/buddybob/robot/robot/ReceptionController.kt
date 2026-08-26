@@ -5,7 +5,6 @@ import android.os.Looper
 import android.util.Log
 import com.ainirobot.coreservice.client.listener.Person
 import com.buddybob.robot.BuddybobApp
-import com.buddybob.robot.MainActivity
 import com.buddybob.robot.config.BobConfig
 import kotlin.math.abs
 
@@ -100,6 +99,17 @@ class ReceptionController(
         speech.stop()
         setPhase(Phase.MENU)
         onStatus?.invoke("Reception menu ready (skipped)")
+    }
+
+    /** Dopo un “vai a” con stay: mostra subito il menu (scegli cosa fare). */
+    fun openMenuAfterArrival() {
+        greetingToken++
+        speech.stop()
+        guestPresent = false
+        presentSinceMs = 0L
+        absentSinceMs = 0L
+        setPhase(Phase.MENU)
+        onStatus?.invoke("Reception menu after arrival")
     }
 
     fun resetToIdle() {
@@ -271,15 +281,10 @@ class ReceptionController(
         val place = BuddybobApp.instance.config.current.reception.standbyPlace.trim()
         if (place.isBlank()) return
         runCatching {
-            val act = BuddybobApp.instance.currentActivity as? MainActivity
-            val cfg = BuddybobApp.instance.robot.placeContent.get(place)
-            val label = cfg?.labelOrName() ?: place
-            act?.showMovingPlaceholder(
-                destinationLabel = label,
-                text = cfg?.displayWhileMoving,
-                media = cfg?.mediaWhileMoving
+            BuddybobApp.instance.robot.goTo.go(
+                placeName = place,
+                after = com.buddybob.robot.platform.GoToController.After.QUIET
             )
-            BuddybobApp.instance.robot.navigation.startNavigation(place)
         }
     }
 

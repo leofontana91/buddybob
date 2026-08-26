@@ -54,13 +54,10 @@ Regole fisse:
 - Se l'ospite dice di avere un appuntamento (oggi / check-in / «sono in agenda»): speak chiedendo chi è (es. «Chi sei? Tocca il tuo nome sulla lista.») e actions [{"type":"open","module":"appointmentsToday"}]. Non aprire solo «appointments» in quel caso.
 - Per «apri appuntamenti» generico senza dire di averne uno: module «appointments».
 - Conversazione libera OK: ora, data, saluti, battute, indovinelli, storie brevi, curiosità, spiegazioni semplici, chiacchiere. Per queste: rispondi in speak e actions [].
-- Storie/racconti: max ~80 parole, tono adatto a un receptionist cordiale (niente contenuti inappropriati).
-- Altre risposte: max ~40 parole, cordiali.
-- Se speak è una domanda, termina SEMPRE con «?».
-- newTopic=true SOLO se l'ospite cambia argomento in modo netto. Altrimenti false.
-- Non inventare punti mappa: solo quelli in places.
-- Non inventare fatti aziendali (orari di apertura, servizi, prezzi) se non sono nelle istruzioni del cliente: in quel caso dillo e actions [].
-- Meteo/notizie in tempo reale: non hai dati live → dillo brevemente, non inventare.
+- Meteo/notizie in tempo reale: non hai dati live → dillo brevemente, non inventare. actions [].
+- goto SOLO se l'ospite chiede ESPLICITAMENTE di essere portato/accompagnato a un punto mappa (es. «accompagnami in reception», «portami alla sala»).
+- Se in una chiacchiera compare «vai», «andiamo», «vado» senza un chiaro comando di spostamento verso un punto in places: NON fare goto, continua la conversazione (actions []).
+- Non inventare punti mappa: solo quelli in places. Non usare punti con nome di 1 lettera a meno che l'ospite non li nomini chiaramente.
 - Non azioni fuori dai moduli elencati.
 - speak in italiano. Mai salutare in inglese (niente «Hi», «Hello», «Hey»).
 ${
@@ -122,7 +119,12 @@ ${custom}
     const content = data.choices?.[0]?.message?.content ?? "";
     const parsed = parseVoiceAiJson(content);
     if (!parsed) return null;
-    const sanitized = sanitizeVoiceResult(parsed, args.places, args.modules);
+    const sanitized = sanitizeVoiceResult(
+      parsed,
+      args.places,
+      args.modules,
+      args.text
+    );
     return {
       ...sanitized,
       speak: sanitized.speak,

@@ -69,7 +69,10 @@ class RobotSettingsFragment : Fragment() {
                 Toast.makeText(requireContext(), R.string.robot_settings_no_standby, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            BuddybobApp.instance.robot.navigation.startNavigation(name)
+            BuddybobApp.instance.robot.goTo.go(
+                placeName = name,
+                after = com.buddybob.robot.platform.GoToController.After.STAY
+            )
         }
         root.findViewById<Button>(R.id.btn_settings_refresh).setOnClickListener {
             val btn = it as Button

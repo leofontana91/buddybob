@@ -3,7 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bob_cream"
+    android:background="@color/bob_black"
+    android:fitsSystemWindows="false"
     android:orientation="vertical"
     tools:context=".MainActivity">
 
@@ -12,7 +13,8 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:background="@color/bob_cream">
 
         <FrameLayout
             android:id="@+id/container_content"
@@ -27,7 +29,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="bottom"
             android:layout_marginHorizontal="12dp"
-            android:layout_marginBottom="12dp"
+            android:layout_marginBottom="36dp"
             android:background="@drawable/bg_voice_bar"
             android:elevation="8dp"
             android:orientation="vertical"
@@ -63,18 +65,26 @@
             android:id="@+id/overlay_place_media"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="#E60D2C50"
+            android:background="@color/bob_navy"
             android:clickable="true"
+            android:elevation="24dp"
             android:focusable="true"
             android:visibility="gone">
+
+            <com.buddybob.robot.ui.avatar.BobAvatarView
+                android:id="@+id/overlay_place_bob"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginBottom="80dp"
+                android:visibility="gone" />
 
             <ImageView
                 android:id="@+id/overlay_place_image"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:layout_marginBottom="72dp"
+                android:layout_marginBottom="80dp"
                 android:contentDescription="@string/places_title"
-                android:scaleType="fitCenter"
+                android:scaleType="centerCrop"
                 android:visibility="gone" />
 
             <VideoView
@@ -82,7 +92,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_gravity="center"
-                android:layout_marginBottom="72dp"
+                android:layout_marginBottom="80dp"
                 android:visibility="gone" />
 
             <TextView
@@ -90,12 +100,49 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom"
+                android:background="#CC0D2C50"
                 android:gravity="center"
                 android:padding="20dp"
+                android:paddingBottom="72dp"
                 android:textColor="@color/bob_white"
                 android:textSize="28sp"
                 android:textStyle="bold"
                 android:visibility="gone" />
+
+            <!-- Stop durante movimento: basso al centro -->
+            <Button
+                android:id="@+id/btn_stop_moving"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:layout_gravity="bottom|center_horizontal"
+                android:layout_marginBottom="20dp"
+                android:background="@drawable/bg_button_danger"
+                android:elevation="10dp"
+                android:minWidth="120dp"
+                android:paddingHorizontal="28dp"
+                android:text="@string/voice_stop"
+                android:textColor="@color/bob_white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
         </FrameLayout>
+
+        <!-- Stop durante parlato / elaborazione: in basso a destra (spazio dialogo) -->
+        <Button
+            android:id="@+id/btn_stop_speak"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_gravity="bottom|end"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="48dp"
+            android:background="@drawable/bg_button_danger"
+            android:elevation="16dp"
+            android:minWidth="112dp"
+            android:paddingHorizontal="24dp"
+            android:text="@string/voice_stop"
+            android:textColor="@color/bob_white"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
     </FrameLayout>
 </LinearLayout>

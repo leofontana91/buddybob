@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import com.buddybob.robot.platform.PlaceContentStore
+import com.buddybob.robot.platform.GoToController
 import com.buddybob.robot.ui.avatar.BobAvatarController
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -28,6 +29,8 @@ class RobotFacade(private val context: Context) {
     val reception = ReceptionController(motion, speech, follow)
     val placeContent = PlaceContentStore()
     val avatar = BobAvatarController()
+    /** Unico “Vai a…” (voce / web / tap). */
+    val goTo = GoToController()
 
     @Volatile
     var isConnected: Boolean = false
@@ -108,6 +111,7 @@ class RobotFacade(private val context: Context) {
     /** Emergency stop for chassis-owning actions. */
     fun haltAllMotion() {
         runCatching {
+            goTo.cancel()
             motion.stopMove()
             follow.stopFocusFollow()
             navigation.stopNavigation()

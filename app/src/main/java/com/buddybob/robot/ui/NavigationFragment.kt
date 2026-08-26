@@ -41,7 +41,10 @@ class NavigationFragment : Fragment() {
         }
         root.findViewById<Button>(R.id.btn_go).setOnClickListener {
             val name = dest.text?.toString().orEmpty().ifBlank { "reception" }
-            nav.startNavigation(name)
+            BuddybobApp.instance.robot.goTo.go(
+                placeName = name,
+                after = com.buddybob.robot.platform.GoToController.After.STAY
+            )
         }
         root.findViewById<Button>(R.id.btn_stop_nav).setOnClickListener {
             nav.stopNavigation()

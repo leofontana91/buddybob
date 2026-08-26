@@ -53,7 +53,7 @@ data class FaceParams(
                 mouthDy = 0.016f
             )
             BobExpression.SLEEPY -> FaceParams(
-                eyeH = 0.075f, capTop = 0.5f, capBot = 0.5f, gloss = 0f, eyeDy = 0.30f,
+                eyeH = 0.082f, capTop = 0.05f, capBot = 0.05f, gloss = 0f, eyeDy = 0.30f,
                 mouthAlpha = 0f
             )
             BobExpression.SURPRISED -> FaceParams(
@@ -83,8 +83,7 @@ data class FaceParams(
  * Disegna occhi e bocca di BOB sullo schermo della testa.
  *
  * Il canvas arriva già trasformato come la testa (rotazione, scala, offset):
- * qui si lavora nelle coordinate proprie della parte `bob_head`, così il viso
- * segue sempre la scocca.
+ * qui si lavora in pixel del bitmap `bob_head`, così il viso segue sempre la scocca.
  */
 class BobFace {
 

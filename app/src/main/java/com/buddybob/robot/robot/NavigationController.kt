@@ -6,6 +6,7 @@ import android.os.RemoteException
 import android.util.Log
 import com.ainirobot.coreservice.client.Definition
 import com.ainirobot.coreservice.client.RobotApi
+import com.ainirobot.coreservice.client.StatusListener
 import com.ainirobot.coreservice.client.listener.ActionListener
 import com.ainirobot.coreservice.client.listener.CommandListener
 import com.buddybob.robot.BuddybobApp
@@ -16,6 +17,8 @@ import org.json.JSONObject
 class NavigationController {
 
     var onStatus: ((String) -> Unit)? = null
+    /** true = ostacolo che blocca, false = via libera di nuovo. */
+    var onObstacle: ((Boolean) -> Unit)? = null
     @Volatile
     var lastDestination: String? = null
         private set
@@ -25,10 +28,14 @@ class NavigationController {
     @Volatile
     var isNavigating: Boolean = false
         private set
+    @Volatile
+    var isBlockedByObstacle: Boolean = false
+        private set
 
     private val main = Handler(Looper.getMainLooper())
     private var pendingStart: Runnable? = null
     private var activeListener: ActionListener? = null
+    private var avoidStopListener: StatusListener? = null
 
     /** Reset prima di una nuova tratta (PlacesFragment wait). */
     fun lastStatusTextForWaitClear() {
@@ -131,6 +138,11 @@ class NavigationController {
                 try {
                     Log.i(TAG, "startNavigation dest=$destName attempt=$tryCount")
                     isNavigating = true
+                    setBlocked(false)
+                    ensureAvoidListeners()
+                    main.post {
+                        BuddybobApp.instance.robot.avatar.onMoving()
+                    }
                     RobotApi.getInstance().startNavigation(
                         ReqId.next(),
                         destName,
@@ -141,6 +153,7 @@ class NavigationController {
                 } catch (e: Exception) {
                     Log.e(TAG, "startNavigation failed: ${e.message}")
                     isNavigating = false
+                    clearAvoidListeners()
                     report("Navigation error: ${e.message}")
                 }
             }
@@ -154,6 +167,8 @@ class NavigationController {
         pendingStart?.let { main.removeCallbacks(it) }
         pendingStart = null
         isNavigating = false
+        setBlocked(false)
+        clearAvoidListeners()
         try {
             RobotApi.getInstance().stopNavigation(ReqId.next())
             report("Navigation stop requested")
@@ -247,6 +262,8 @@ class NavigationController {
                     return
                 }
                 isNavigating = false
+                setBlocked(false)
+                clearAvoidListeners()
                 report("nav result status=$status response=$response")
             }
 
@@ -261,6 +278,8 @@ class NavigationController {
                     return
                 }
                 isNavigating = false
+                setBlocked(false)
+                clearAvoidListeners()
                 val msg = when (errorCode) {
                     Definition.ERROR_NOT_ESTIMATE -> "Not localized"
                     Definition.ERROR_IN_DESTINATION -> "Already at destination"
@@ -275,8 +294,92 @@ class NavigationController {
 
             override fun onStatusUpdate(status: Int, data: String?, extraData: String?) {
                 if (isTerminalStatus(lastStatusText)) return
-                report("nav status=$status data=$data")
+                when (status) {
+                    // Solo rilevamento / evitamento in corso: il robot può ancora muoversi.
+                    // Non annunciare ancora — aspettiamo AVOID_STOPPING (fermo vero).
+                    Definition.STATUS_NAVI_AVOID,
+                    Definition.STATUS_NAVI_OBSTACLES_AVOID,
+                    Definition.STATUS_GOAL_OCCLUDED,
+                    Definition.STATUS_NAVI_AVOID_IMMEDIATELY -> {
+                        report("Obstacle seen / avoiding ($status)")
+                    }
+                    Definition.STATUS_NAVI_AVOID_END,
+                    Definition.STATUS_NAVI_OBSTACLES_DISAPPEAR,
+                    Definition.STATUS_GOAL_OCCLUDED_END -> {
+                        report("Obstacle cleared ($status)")
+                        setBlocked(false)
+                    }
+                    Definition.STATUS_START_NAVIGATION -> {
+                        report("nav status=start")
+                        setBlocked(false)
+                    }
+                    else -> report("nav status=$status data=$data")
+                }
             }
+        }
+    }
+
+    private fun setBlocked(blocked: Boolean) {
+        if (isBlockedByObstacle == blocked) return
+        isBlockedByObstacle = blocked
+        main.post { onObstacle?.invoke(blocked) }
+    }
+
+    private fun ensureAvoidListeners() {
+        if (avoidStopListener != null) return
+        val listener = object : StatusListener() {
+            @Throws(RemoteException::class)
+            override fun onStatusUpdate(type: String?, data: String?) {
+                if (!isNavigating) return
+                when (type) {
+                    Definition.STATUS_AVOID_STOPPING,
+                    Definition.STATUS_STATIC_AVOID_STOPPING -> {
+                        val raw = data?.trim().orEmpty()
+                        val cleared = raw.equals("false", ignoreCase = true) ||
+                            raw == "0" ||
+                            raw.contains("end", ignoreCase = true) ||
+                            raw.contains("false", ignoreCase = true) ||
+                            raw.contains("\"stop\":false", ignoreCase = true)
+                        val stopped = !cleared && (
+                            raw.equals("true", ignoreCase = true) ||
+                                raw == "1" ||
+                                raw.contains("\"stop\":true", ignoreCase = true) ||
+                                raw.contains("start", ignoreCase = true) ||
+                                raw.contains("stop", ignoreCase = true) ||
+                                raw.isEmpty()
+                            )
+                        when {
+                            cleared -> {
+                                report("Obstacle avoid-stopping end data=$data")
+                                setBlocked(false)
+                            }
+                            stopped -> {
+                                // Fermato davvero: avatar + frase
+                                report("Obstacle stopped data=$data")
+                                setBlocked(true)
+                            }
+                            else -> report("Obstacle avoid-stopping ignored data=$data")
+                        }
+                    }
+                }
+            }
+        }
+        avoidStopListener = listener
+        runCatching {
+            RobotApi.getInstance()
+                .registerStatusListener(Definition.STATUS_AVOID_STOPPING, listener)
+        }
+        runCatching {
+            RobotApi.getInstance()
+                .registerStatusListener(Definition.STATUS_STATIC_AVOID_STOPPING, listener)
+        }
+    }
+
+    private fun clearAvoidListeners() {
+        val listener = avoidStopListener ?: return
+        avoidStopListener = null
+        runCatching {
+            RobotApi.getInstance().unregisterStatusListener(listener)
         }
     }
 
@@ -293,6 +396,9 @@ class NavigationController {
             activeListener = listener
             try {
                 isNavigating = true
+                main.post {
+                    BuddybobApp.instance.robot.avatar.onMoving()
+                }
                 RobotApi.getInstance().startNavigation(
                     ReqId.next(),
                     destName,

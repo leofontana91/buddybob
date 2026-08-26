@@ -98,6 +98,8 @@ class BobAvatarController {
 
     fun onMoving() = setMode(BobAvatarMode.MOVING)
 
+    fun onBlocked() = setMode(BobAvatarMode.BLOCKED)
+
     fun onSuccess() {
         setMode(BobAvatarMode.SUCCESS)
         main.postDelayed({

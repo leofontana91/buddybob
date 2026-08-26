@@ -18,23 +18,35 @@ class SpeechController {
     var listeningDesired: Boolean = false
         private set
 
+    /** Blocca ASR anche se listeningDesired (TTS / azione / stop UI). */
+    @Volatile
+    var listeningSuppressed: Boolean = false
+        private set
+
     @Volatile
     private var speaking: Boolean = false
+
+    val isSpeaking: Boolean get() = speaking
 
     private fun skill(): SkillApi? = BuddybobApp.instance.getSkillApi()
 
     fun setListeningDesired(enabled: Boolean) {
         listeningDesired = enabled
         applyRecognition()
-        if (enabled) {
+        if (enabled && !listeningSuppressed && !speaking) {
             // Di default ascolta solo il cono frontale (non laterale/dietro).
             resetMicToFront()
         }
     }
 
+    fun setListeningSuppressed(suppressed: Boolean) {
+        listeningSuppressed = suppressed
+        applyRecognition()
+    }
+
     private fun applyRecognition() {
         val api = skill() ?: return
-        val on = listeningDesired && !speaking
+        val on = listeningDesired && !speaking && !listeningSuppressed
         // Chiude il “hint” di sistema sul wake (spesso dice «Hi» / saluto OS).
         runCatching { api.setWakeupHintClosed(true) }
         api.setRecognizable(on)

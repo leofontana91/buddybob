@@ -14,19 +14,24 @@ import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.View
 import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.min
 import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * BOB a livelli separati, interamente vettoriale: ombra, braccia, corpo, scocca
- * della testa e viso sono tutti path disegnati su Canvas, tracciati dall'artwork
- * originale. Niente bitmap: resta nitido a qualsiasi dimensione, si deforma senza
- * sgranarsi e i colori si possono cambiare a runtime.
+ * BOB come pupazzo articolato, tutto vettoriale.
  *
- * La vita "di base" (respiro, oscillazione, battito di palpebre, sguardo) è
- * procedurale e gira sempre. Gli stati (saluto, ascolto, pensiero…) muovono le
- * proprietà pubbliche di posa, che si sommano al movimento di base.
+ * Sette pezzi — testa, collo, torso, due braccia, due gambe — piu' l'ombra.
+ * Ogni pezzo e' una forma chiusa col proprio contorno e si SOVRAPPONE al vicino
+ * invece di accostarglisi: nessuna posa puo' aprire una fessura. Ogni giunto e'
+ * un disco centrato sul perno, e un disco ruotato attorno al proprio centro non
+ * si muove: per questo la spalla resta sepolta sotto il torso a qualunque angolo.
+ *
+ * Il braccio non ruota soltanto: si piega lungo una curva, e la mano segue la
+ * tangente. E' cosi' che saluta e bussa davvero.
  */
 class BobRigView @JvmOverloads constructor(
     context: Context,
@@ -35,10 +40,14 @@ class BobRigView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     private val parts = BobVector.parts(context)
-    private val partHead = parts[P_HEAD]
-    private val partBody = parts[P_BODY]
-    private val partArm = parts[P_ARM]
-    private val partShadow = parts[P_SHADOW]
+    private val lay = BobVector.layout(context)
+    private val pHead = parts[P_HEAD]
+    private val pNeck = parts[P_NECK]
+    private val pBody = parts[P_BODY]
+    private val pArm = parts[P_ARM]
+    private val pHand = parts[P_HAND]
+    private val pLeg = parts[P_LEG]
+    private val pShadow = parts[P_SHADOW]
 
     // ---------------------------------------------------------------- posa
     /** Traslazione verticale del personaggio, in frazione dell'altezza. */
@@ -49,37 +58,86 @@ class BobRigView @JvmOverloads constructor(
     /** >0 schiaccia sui piedi, <0 allunga. Essendo vettoriale non sgrana mai. */
     var poseSquash = 0f
         set(v) { field = v; invalidate() }
+    /** Inclinazione di tutto il personaggio attorno ai piedi. */
+    var lean = 0f
+        set(v) { field = v; invalidate() }
     var headTilt = 0f
         set(v) { field = v; invalidate() }
     var headDx = 0f
         set(v) { field = v; invalidate() }
     var headDy = 0f
         set(v) { field = v; invalidate() }
-    /** Gradi di rotazione del braccio attorno alla spalla; positivo = alza verso l'esterno. */
+
+    /** Gradi alla spalla; positivo = alza verso l'esterno. */
     var armLeft = 0f
         set(v) { field = v; invalidate() }
     var armRight = 0f
         set(v) { field = v; invalidate() }
-    /** Alone azzurro sul vetro. */
+    /** Piega del braccio: >0 curva la mano verso l'esterno. */
+    var curlLeft = 0f
+        set(v) { field = v; invalidate() }
+    var curlRight = 0f
+        set(v) { field = v; invalidate() }
+    /** Allunga il braccio lungo il proprio asse. */
+    var reachLeft = 0f
+        set(v) { field = v; invalidate() }
+    var reachRight = 0f
+        set(v) { field = v; invalidate() }
+    var liftLeft = 0f
+        set(v) { field = v; invalidate() }
+    var liftRight = 0f
+        set(v) { field = v; invalidate() }
+    /**
+     * Avvicinamento a chi guarda: il braccio si allarga verso la mano invece di
+     * essere ingrandito in blocco. Cosi' la radice resta esattamente sulla
+     * spalla e il braccio non puo' staccarsi dal corpo.
+     */
+    var spreadLeft = 0f
+        set(v) { field = v; invalidate() }
+    var spreadRight = 0f
+        set(v) { field = v; invalidate() }
+    /** Rotazione della mano attorno al polso, in gradi. */
+    var wristLeft = 0f
+        set(v) { field = v; invalidate() }
+    var wristRight = 0f
+        set(v) { field = v; invalidate() }
+    /** Se true il braccio destro passa davanti alla testa (serve per bussare). */
+    var armFront = false
+        set(v) { field = v; invalidate() }
+
+    /** Gradi all'anca; positivo = apre verso l'esterno. */
+    var legLeft = 0f
+        set(v) { field = v; invalidate() }
+    var legRight = 0f
+        set(v) { field = v; invalidate() }
+    /** Quanto le gambe si raccolgono sotto il corpo, in frazione dell'altezza. */
+    var legTuck = 0f
+        set(v) { field = v; invalidate() }
+
     var glow = 0f
         set(v) { field = v; invalidate() }
-    /** Velo scuro (schermo spento / sonno). */
     var veil = 0f
         set(v) { field = v; invalidate() }
-    /** Anello pulsante attorno allo schermo (ascolto). */
     var ring = 0f
         set(v) { field = v; invalidate() }
-    /** Quanto colora il vetro, 0..1. */
     var tint = 0f
         set(v) { field = v; invalidate() }
-    /** Colore del vetro quando [tint] > 0. */
-    var tintColor = 0xFF0E6E9C.toInt()
+    var tintColor = TINT_COOL
         set(v) { field = v; invalidate() }
-    /** Riflesso che attraversa il vetro, 0..1 = posizione della sciabolata. */
     var sheen = 0f
         set(v) { field = v; invalidate() }
-    /** Ampiezza del respiro di base: 0 lo spegne. */
     var breathAmp = 1f
+
+    /** Eta' in secondi delle tre increspature sul vetro; negativo = spenta. */
+    private val ripple = floatArrayOf(-1f, -1f, -1f)
+
+    fun setRipple(i: Int, age: Float) {
+        if (i in 0..2) { ripple[i] = age; invalidate() }
+    }
+
+    fun clearRipples() {
+        ripple[0] = -1f; ripple[1] = -1f; ripple[2] = -1f
+    }
 
     // ---------------------------------------------------------------- viso
     private val face = BobFace()
@@ -96,7 +154,6 @@ class BobRigView @JvmOverloads constructor(
     private var lookX = 0f
     private var lookY = 0f
 
-    /** Livello audio 0..1 per il lip-sync; se non arriva, il parlato è procedurale. */
     var audioLevel = 0f
         set(v) { field = v; lastAudioAt = SystemClock.uptimeMillis() }
     private var lastAudioAt = 0L
@@ -110,17 +167,32 @@ class BobRigView @JvmOverloads constructor(
     private val rnd = Random(0xB0B)
 
     private val t0 = SystemClock.uptimeMillis()
+    private var lastFrameAt = t0
     private var clock: ValueAnimator? = null
+
+    /** La testa insegue il corpo con un filo di ritardo: e' questo che da' peso. */
+    private var headLag = 0f
+    private var tiltSmooth = 0f
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val overlay = Paint(Paint.ANTI_ALIAS_FLAG)
     private val m = Matrix()
+    private val mHand = Matrix()
+    private val mLocal = Matrix()
     private val shaderMatrix = Matrix()
     private val screenBounds = RectF()
-    private val fallbackScreenPath = Path()
+    private val tmpPath = Path()
+    private val tmp2 = FloatArray(2)
     private var glowShader: RadialGradient? = null
     private var sheenShader: LinearGradient? = null
     private var shadersFor = 0f
+
+    // parametri di piega correnti, letti dal deformatore
+    private var bCurl = 0f
+    private var bReach = 0f
+    private var bLift = 0f
+    private var bSpread = 0f
+    private var bWrist = 0f
 
     init {
         scheduleBlink(SystemClock.uptimeMillis())
@@ -146,7 +218,6 @@ class BobRigView @JvmOverloads constructor(
         }
     }
 
-    /** Sguardo verso un punto: (0,0) = dritto davanti, (1,1) = in basso a destra. */
     fun lookAt(x: Float, y: Float) {
         lookTargetX = x.coerceIn(-1f, 1f)
         lookTargetY = y.coerceIn(-1f, 1f)
@@ -154,11 +225,32 @@ class BobRigView @JvmOverloads constructor(
 
     fun lookCenter() = lookAt(0f, 0f)
 
-    /** Fa battere le palpebre subito (utile come reazione a un tocco). */
     fun blinkNow() {
         val now = SystemClock.uptimeMillis()
         blinkStartedAt = now
         nextBlinkAt = now + BLINK_TOTAL
+    }
+
+    /** Dove si trova la mano destra sulla tela: serve a centrare le increspature. */
+    fun handPoint(out: FloatArray) {
+        val a = lay[P_ARM]
+        val arm = pArm ?: return
+        val s = fitScale()
+        val ox = (width - lay.canvasW * s) / 2f
+        val oy = (height - lay.canvasH * s) / 2f
+        val dy = poseDy - breath() * 0.006f
+        bCurl = curlRight; bReach = reachRight; bLift = liftRight; bSpread = spreadRight; bWrist = wristRight
+        warpArm(a.wristX * arm.w, a.wristY * arm.h, tmp2)
+        val sw = a.w * lay.canvasW * s / arm.w
+        val sh = a.h * lay.canvasH * s / arm.h
+        var x = ox + (a.mirrorX + a.w) * lay.canvasW * s - tmp2[0] * sw
+        var y = oy + (a.y + dy) * lay.canvasH * s + tmp2[1] * sh
+        val px = ox + (a.mirrorX + (1f - a.pivotX) * a.w) * lay.canvasW * s
+        val py = oy + (a.y + dy + a.pivotY * a.h) * lay.canvasH * s
+        val rad = (-(armRight)) * Math.PI.toFloat() / 180f
+        val c = cos(rad); val sn = sin(rad)
+        out[0] = px + (x - px) * c - (y - py) * sn
+        out[1] = py + (x - px) * sn + (y - py) * c
     }
 
     private fun currentParams(): FaceParams =
@@ -192,56 +284,102 @@ class BobRigView @JvmOverloads constructor(
         }
     }
 
+    private fun fitScale() = min(width / lay.canvasW, height / lay.canvasH) * poseScale
+
+    private fun breath(): Float =
+        sin((SystemClock.uptimeMillis() - t0) / 1000f * TWO_PI / BREATH_PERIOD) * breathAmp
+
     // ---------------------------------------------------------------- disegno
 
     override fun onDraw(canvas: Canvas) {
-        val head = partHead ?: return
-        val body = partBody ?: return
-        val arm = partArm ?: return
+        val head = pHead ?: return
+        val body = pBody ?: return
+        val arm = pArm ?: return
+        val leg = pLeg ?: return
 
         val now = SystemClock.uptimeMillis()
         val t = (now - t0) / 1000f
-        tickLife(now, t)
+        val dt = ((now - lastFrameAt) / 1000f).coerceIn(0.001f, 0.05f)
+        lastFrameAt = now
+        tickLife(now, t, dt)
 
-        val s = min(width / CANVAS_W, height / CANVAS_H) * poseScale
-        val ox = (width - CANVAS_W * s) / 2f
-        val oy = (height - CANVAS_H * s) / 2f
+        val s = fitScale()
+        val ox = (width - lay.canvasW * s) / 2f
+        val oy = (height - lay.canvasH * s) / 2f
+        val cw = lay.canvasW * s
+        val ch = lay.canvasH * s
 
-        val breath = sin(t * TWO_PI / BREATH_PERIOD) * breathAmp
+        val br = sin(t * TWO_PI / BREATH_PERIOD) * breathAmp
         val sway = sin(t * TWO_PI / SWAY_PERIOD) * breathAmp
-        val dy = poseDy - breath * 0.006f
-        val squash = poseSquash - breath * 0.012f
+        val dy = poseDy - br * 0.006f
+        val squash = poseSquash - br * 0.012f
+        val aL = armLeft + sway * 1.2f
+        val aR = armRight + sway * 1.2f
         val lift = -dy
 
-        val pivotX = ox + NECK_X * CANVAS_W * s
-        val feetY = oy + (FEET_Y + dy) * CANVAS_H * s
+        // inclinazione di tutto il pupazzo attorno ai piedi
+        val leanPivotX = ox + NECK_X * cw
+        val leanPivotY = oy + FEET_Y * ch
+        val leaning = abs(lean) > 0.01f
+        if (leaning) {
+            canvas.save()
+            canvas.rotate(lean, leanPivotX, leanPivotY)
+        }
 
-        // ---- ombra: si stringe quando BOB si alza
-        partShadow?.let { sh ->
-            val k = (1f - lift * 1.6f).coerceIn(0.55f, 1.25f)
-            place(m, sh, SHADOW_X, SHADOW_Y, SHADOW_W, SHADOW_H, false, s, ox, oy)
-            m.postScale(k, k, ox + (SHADOW_X + SHADOW_W / 2f) * CANVAS_W * s,
-                oy + (SHADOW_Y + SHADOW_H / 2f) * CANVAS_H * s)
-            paint.alpha = (255 * (1f - lift * 2.2f).coerceIn(0.35f, 1f)).toInt()
+        // ---- ombra
+        pShadow?.let { sh ->
+            val r = lay[P_SHADOW]
+            val k = (1f - lift * 1.5f).coerceIn(0.55f, 1.3f)
+            place(m, sh, r.x, r.y, r.w, r.h, false, s, ox, oy)
+            m.postScale(k, k, ox + (r.x + r.w / 2f) * cw, oy + (r.y + r.h / 2f) * ch)
+            paint.alpha = (255 * (1f - lift * 2.4f).coerceIn(0.3f, 1f)).toInt()
             drawPart(canvas, sh, m)
             paint.alpha = 255
         }
 
-        // ---- braccia: ruotano attorno alla spalla
-        drawArm(canvas, arm, ARM_X, dy, s, ox, oy, armLeft + sway * 1.2f, false)
-        drawArm(canvas, arm, ARM_MIRROR_X, dy, s, ox, oy, armRight + sway * 1.2f, true)
+        // ---- gambe: ruotano all'anca e si raccolgono in volo
+        drawLimb(canvas, leg, lay[P_LEG], dy - legTuck, s, ox, oy, legLeft, false)
+        drawLimb(canvas, leg, lay[P_LEG], dy - legTuck, s, ox, oy, legRight, true)
 
-        // ---- corpo: schiacciato sui piedi
-        place(m, body, BODY_X, BODY_Y + dy, BODY_W, BODY_H, false, s, ox, oy)
-        m.postScale(1f + squash * 0.5f, 1f - squash, ox + (BODY_X + BODY_W / 2f) * CANVAS_W * s, feetY)
+        // ---- braccio sinistro
+        bCurl = curlLeft; bReach = reachLeft; bLift = liftLeft; bSpread = spreadLeft; bWrist = wristLeft
+        drawArm(canvas, arm, dy, s, ox, oy, aL, false)
+
+        // ---- braccio destro (davanti alla testa solo quando bussa)
+        if (!armFront) {
+            bCurl = curlRight; bReach = reachRight; bLift = liftRight; bSpread = spreadRight; bWrist = wristRight
+            drawArm(canvas, arm, dy, s, ox, oy, aR, true)
+        }
+
+        // ---- collo: fermo sul torso, si allunga se la testa si stacca
+        pNeck?.let { neck ->
+            val r = lay[P_NECK]
+            val hdy = headLag * 1.15f
+            val bx = ox + (r.x + r.w / 2f) * cw
+            val by = oy + (r.y + r.h + dy) * ch
+            val stretch = 1f + (dy - hdy).coerceAtLeast(0f) * ch / (r.h * ch)
+            place(m, neck, r.x, r.y + dy, r.w, r.h, false, s, ox, oy)
+            m.postScale(1f, stretch, bx, by)
+            m.postRotate(tiltSmooth * 0.45f, bx, by)
+            drawPart(canvas, neck, m)
+        }
+
+        // ---- torso
+        val b = lay[P_BODY]
+        val bcx = ox + (b.x + b.w / 2f) * cw
+        val bfy = oy + (FEET_Y + dy) * ch
+        place(m, body, b.x, b.y + dy, b.w, b.h, false, s, ox, oy)
+        m.postScale(1f + squash * 0.5f, 1f - squash, bcx, bfy)
         drawPart(canvas, body, m)
 
-        // ---- testa: inclina attorno al collo, poi vetro e viso
-        val neckY = oy + (NECK_Y + dy) * CANVAS_H * s
-        place(m, head, HEAD_X + headDx, HEAD_Y + dy * 1.15f + headDy, HEAD_W, HEAD_H, false, s, ox, oy)
-        m.postRotate(headTilt + sway * 0.6f, pivotX, neckY)
-        m.postScale(1f - squash * 0.35f, 1f + squash * 0.25f, pivotX, neckY)
-
+        // ---- testa + vetro + viso
+        val h = lay[P_HEAD]
+        val hdy = headLag * 1.15f
+        val nx = ox + NECK_X * cw
+        val ny = oy + (NECK_Y + hdy) * ch
+        place(m, head, h.x + headDx, h.y + hdy + headDy, h.w, h.h, false, s, ox, oy)
+        m.postRotate(tiltSmooth, nx, ny)
+        m.postScale(1f - squash * 0.35f, 1f + squash * 0.3f, nx, ny)
         canvas.save()
         canvas.concat(m)
         for (sh in head.shapes) {
@@ -250,6 +388,15 @@ class BobRigView @JvmOverloads constructor(
         }
         drawScreen(canvas, head)
         canvas.restore()
+
+        if (armFront) {
+            bCurl = curlRight; bReach = reachRight; bLift = liftRight; bSpread = spreadRight; bWrist = wristRight
+            drawArm(canvas, arm, dy, s, ox, oy, aR, true)
+        }
+
+        if (leaning) canvas.restore()
+
+        drawRipples(canvas)
     }
 
     /** Matrice che porta le coordinate proprie della parte sulla tela del rig. */
@@ -258,53 +405,160 @@ class BobRigView @JvmOverloads constructor(
         fx: Float, fy: Float, fw: Float, fh: Float,
         mirror: Boolean, s: Float, ox: Float, oy: Float
     ) {
-        val w = fw * CANVAS_W * s
-        val h = fh * CANVAS_H * s
+        val w = fw * lay.canvasW * s
+        val hh = fh * lay.canvasH * s
         out.reset()
         if (mirror) {
-            out.setScale(-w / part.w, h / part.h)
-            out.postTranslate(ox + fx * CANVAS_W * s + w, oy + fy * CANVAS_H * s)
+            out.setScale(-w / part.w, hh / part.h)
+            out.postTranslate(ox + fx * lay.canvasW * s + w, oy + fy * lay.canvasH * s)
         } else {
-            out.setScale(w / part.w, h / part.h)
-            out.postTranslate(ox + fx * CANVAS_W * s, oy + fy * CANVAS_H * s)
+            out.setScale(w / part.w, hh / part.h)
+            out.postTranslate(ox + fx * lay.canvasW * s, oy + fy * lay.canvasH * s)
         }
     }
 
     private fun drawPart(c: Canvas, part: VecPart, matrix: Matrix) {
         c.save()
         c.concat(matrix)
+        val a = paint.alpha
         for (s in part.shapes) {
-            val a = paint.alpha
             paint.color = s.color
             paint.alpha = a
             c.drawPath(s.path, paint)
         }
+        paint.alpha = a
         c.restore()
     }
 
-    private fun drawArm(
-        c: Canvas, arm: VecPart, xFrac: Float, dy: Float, s: Float,
+    /** Gamba o altro arto rigido che ruota attorno al proprio perno. */
+    private fun drawLimb(
+        c: Canvas, part: VecPart, r: PartRect, dy: Float, s: Float,
         ox: Float, oy: Float, deg: Float, mirror: Boolean
     ) {
-        val w = ARM_W * CANVAS_W * s
-        val h = ARM_H * CANVAS_H * s
-        val left = ox + xFrac * CANVAS_W * s
-        val top = oy + (ARM_Y + dy) * CANVAS_H * s
-        val px = left + (if (mirror) 1f - ARM_PIVOT_X else ARM_PIVOT_X) * w
-        val py = top + ARM_PIVOT_Y * h
-        place(m, arm, xFrac, ARM_Y + dy, ARM_W, ARM_H, mirror, s, ox, oy)
+        val x = if (mirror) r.mirrorX else r.x
+        val px = ox + (x + (if (mirror) 1f - r.pivotX else r.pivotX) * r.w) * lay.canvasW * s
+        val py = oy + (r.y + dy + r.pivotY * r.h) * lay.canvasH * s
+        place(m, part, x, r.y + dy, r.w, r.h, mirror, s, ox, oy)
         m.postRotate(if (mirror) -deg else deg, px, py)
-        drawPart(c, arm, m)
+        drawPart(c, part, m)
     }
 
     /**
-     * Velo, tinta, alone, riflesso, anello e viso: tutto ritagliato sul path
-     * esatto del vetro, quindi resta dentro la cornice a ogni inclinazione.
+     * Il braccio: rotazione alla spalla, piega lungo la curva, e — quando la mano
+     * viene avanti verso chi guarda — scostamento e ingrandimento. Il foro alla
+     * spalla toglie il disco d'innesto, cosi' non si vede nemmeno passando davanti.
      */
+    private fun drawArm(
+        c: Canvas, arm: VecPart, dy: Float, s: Float,
+        ox: Float, oy: Float, deg: Float, mirror: Boolean
+    ) {
+        val r = lay[P_ARM]
+        val x = if (mirror) r.mirrorX else r.x
+        val px = ox + (x + (if (mirror) 1f - r.pivotX else r.pivotX) * r.w) * lay.canvasW * s
+        val py = oy + (r.y + dy + r.pivotY * r.h) * lay.canvasH * s
+        place(m, arm, x, r.y + dy, r.w, r.h, mirror, s, ox, oy)
+        m.postRotate(if (mirror) -deg else deg, px, py)
+        val bent = abs(bCurl) > 1e-4f || abs(bReach) > 1e-4f ||
+            abs(bLift) > 1e-4f || abs(bSpread) > 1e-4f
+
+        // prima la mano, poi l'avambraccio: il polsino copre il giunto del polso
+        pHand?.let { hand ->
+            handMatrix(arm, mLocal)
+            mHand.set(m)
+            mHand.preConcat(mLocal)
+            drawPart(c, hand, mHand)
+        }
+
+        c.save()
+        c.concat(m)
+        for (sh in arm.shapes) {
+            paint.color = sh.color
+            if (bent) {
+                sh.rebuild(tmpPath, ::warpArm, tmp2)
+                c.drawPath(tmpPath, paint)
+            } else {
+                c.drawPath(sh.path, paint)
+            }
+        }
+        c.restore()
+    }
+
+    /**
+     * La mano e' rigida ma segue il polso deformato: si sposta dove finisce la
+     * curva, eredita l'inclinazione con cui il braccio termina e ci aggiunge la
+     * rotazione del polso. E' cosi' che gira per salutare e per bussare.
+     */
+    private fun handMatrix(arm: VecPart, out: Matrix) {
+        val r = lay[P_ARM]
+        val wx = r.wristX * arm.w
+        val wy = r.wristY * arm.h
+        warpArm(wx, wy, tmp2)
+        val sx = r.pivotX * arm.w
+        val sy = r.pivotY * arm.h
+        val ax = wx - sx
+        val ay = wy - sy
+        val len = hypot(ax, ay).coerceAtLeast(1e-3f)
+        val nx = -ay / len
+        val ny = ax / len
+        val p2x = sx + ax * 2f / 3f + nx * bCurl * len
+        val p2y = sy + ay * 2f / 3f + ny * bCurl * len
+        val p3x = sx + ax * (1f + bReach) + nx * bLift * len
+        val p3y = sy + ay * (1f + bReach) + ny * bLift * len
+        val deg = (atan2(p3y - p2y, p3x - p2x) - atan2(ay, ax)) * 57.29578f + bWrist
+        val k = 1f + bSpread
+        out.reset()
+        out.setScale(k, k, wx, wy)
+        out.postRotate(deg, wx, wy)
+        out.postTranslate(tmp2[0] - wx, tmp2[1] - wy)
+    }
+
+    /**
+     * Deformatore: ogni punto del disegno viene letto come "quanto lungo il
+     * braccio" e "quanto di lato", poi riposizionato lungo una curva che parte
+     * dalla spalla e finisce al polso. Muovendo la curva il braccio si piega e la
+     * mano ruota da sola seguendo la tangente.
+     */
+    private fun warpArm(x: Float, y: Float, out: FloatArray) {
+        val arm = pArm ?: run { out[0] = x; out[1] = y; return }
+        val r = lay[P_ARM]
+        val sx = r.pivotX * arm.w
+        val sy = r.pivotY * arm.h
+        val ax = r.wristX * arm.w - sx
+        val ay = r.wristY * arm.h - sy
+        val len = hypot(ax, ay)
+        if (len < 1e-3f) { out[0] = x; out[1] = y; return }
+        val ex = ax / len; val ey = ay / len
+        val nx = -ey; val ny = ex
+        val dx = x - sx; val dy = y - sy
+        val t = (dx * ex + dy * ey) / len
+        // la prospettiva si fa allargando il braccio verso la mano, non
+        // ingrandendolo tutto: la radice resta sulla spalla e non si stacca
+        val v = (dx * nx + dy * ny) * (1f + bSpread * t.coerceIn(0f, 1.15f))
+
+        val p1x = sx + ax / 3f; val p1y = sy + ay / 3f
+        val p2x = sx + ax * 2f / 3f + nx * bCurl * len
+        val p2y = sy + ay * 2f / 3f + ny * bCurl * len
+        val p3x = sx + ax * (1f + bReach) + nx * bLift * len
+        val p3y = sy + ay * (1f + bReach) + ny * bLift * len
+
+        val u = t.coerceIn(0f, 1f)
+        val mu = 1f - u
+        val bx = mu * mu * mu * sx + 3f * mu * mu * u * p1x + 3f * mu * u * u * p2x + u * u * u * p3x
+        val by = mu * mu * mu * sy + 3f * mu * mu * u * p1y + 3f * mu * u * u * p2y + u * u * u * p3y
+        var tx = 3f * mu * mu * (p1x - sx) + 6f * mu * u * (p2x - p1x) + 3f * u * u * (p3x - p2x)
+        var ty = 3f * mu * mu * (p1y - sy) + 6f * mu * u * (p2y - p1y) + 3f * u * u * (p3y - p2y)
+        val tl = hypot(tx, ty).coerceAtLeast(1e-4f)
+        tx /= tl; ty /= tl
+        val over = (t - u) * len
+        out[0] = bx + tx * over - ty * v
+        out[1] = by + ty * over + tx * v
+    }
+
+    /** Velo, tinta, alone, riflesso, anello e viso, ritagliati sul vetro. */
     private fun drawScreen(c: Canvas, head: VecPart) {
         val hw = head.w
         val hh = head.h
-        val screen = head.screen ?: fallbackScreen(hw, hh)
+        val screen = head.screen ?: return
         screen.computeBounds(screenBounds, true)
 
         if (veil > 0.01f) {
@@ -313,16 +567,13 @@ class BobRigView @JvmOverloads constructor(
             overlay.alpha = (205 * veil).toInt()
             c.drawPath(screen, overlay)
         }
-
         if (tint > 0.01f) {
             overlay.shader = null
             overlay.color = tintColor
             overlay.alpha = (190 * tint).toInt()
             c.drawPath(screen, overlay)
         }
-
         ensureShaders(hw)
-
         if (glow > 0.01f) {
             overlay.shader = glowShader
             overlay.alpha = (255 * glow).toInt()
@@ -338,7 +589,6 @@ class BobRigView @JvmOverloads constructor(
         c.save()
         c.clipPath(screen)
         face.draw(c, hw, hh)
-
         if (sheen > 0.001f) {
             shaderMatrix.setTranslate((sheen * 2.2f - 0.6f) * screenBounds.width(), 0f)
             shaderMatrix.postRotate(-18f, screenBounds.centerX(), screenBounds.centerY())
@@ -365,6 +615,29 @@ class BobRigView @JvmOverloads constructor(
         }
     }
 
+    /** I cerchi sul vetro davanti a chi guarda, uno per ogni colpo. */
+    private fun drawRipples(c: Canvas) {
+        var any = false
+        for (age in ripple) if (age >= 0f) { any = true; break }
+        if (!any) return
+        val s = fitScale()
+        handPoint(tmp2)
+        val cx = tmp2[0]
+        val cy = tmp2[1]
+        overlay.shader = null
+        overlay.style = Paint.Style.STROKE
+        overlay.color = BobFace.CYAN
+        for (age in ripple) {
+            if (age < 0f) continue
+            val u = age / RIPPLE_LIFE
+            if (u > 1f) continue
+            overlay.strokeWidth = 9f * s * (1f - u * 0.7f)
+            overlay.alpha = (140 * (1f - u)).toInt()
+            c.drawCircle(cx, cy, lay.canvasW * s * (0.02f + u * 0.34f), overlay)
+        }
+        overlay.style = Paint.Style.FILL
+    }
+
     private fun ensureShaders(hw: Float) {
         if (shadersFor == hw && glowShader != null) return
         shadersFor = hw
@@ -380,31 +653,22 @@ class BobRigView @JvmOverloads constructor(
         )
     }
 
-    /** Se il path del vetro mancasse, si ripiega sul rettangolo misurato sull'artwork. */
-    private fun fallbackScreen(hw: Float, hh: Float): Path {
-        if (fallbackScreenPath.isEmpty) {
-            val r = hw * 0.085f
-            fallbackScreenPath.addRoundRect(
-                BobFace.SCREEN_L * hw, BobFace.SCREEN_T * hh,
-                BobFace.SCREEN_R * hw, BobFace.SCREEN_B * hh, r, r, Path.Direction.CW
-            )
-        }
-        return fallbackScreenPath
-    }
-
     // ---------------------------------------------------------------- vita procedurale
 
-    private fun tickLife(now: Long, t: Float) {
-        // sguardo: insegue il bersaglio con un filo di deriva, così non resta mai fermo
+    private fun tickLife(now: Long, t: Float, dt: Float) {
+        val dyNow = poseDy - sin(t * TWO_PI / BREATH_PERIOD) * breathAmp * 0.006f
+        // la testa arriva dopo il corpo: senza questo ritardo il salto sembra un ascensore
+        headLag += (dyNow - headLag) * (1f - Math.pow(0.0009, dt.toDouble()).toFloat()) * 0.55f
+        val tiltTarget = headTilt + sin(t * TWO_PI / SWAY_PERIOD) * breathAmp * 0.6f -
+            (dyNow - headLag) * 210f
+        tiltSmooth += (tiltTarget - tiltSmooth) * (1f - Math.pow(0.0004, dt.toDouble()).toFloat())
+
         val driftX = sin(t * 0.41f) * 0.10f + sin(t * 1.07f) * 0.03f
         val driftY = sin(t * 0.29f) * 0.08f
         lookX += (lookTargetX + driftX - lookX) * 0.10f
         lookY += (lookTargetY + driftY - lookY) * 0.10f
 
-        // palpebre: intervallo casuale, mai cadenzato
-        if (now >= nextBlinkAt && blinkStartedAt == 0L) {
-            blinkStartedAt = now
-        }
+        if (now >= nextBlinkAt && blinkStartedAt == 0L) blinkStartedAt = now
         if (blinkStartedAt != 0L) {
             val e = now - blinkStartedAt
             blink = when {
@@ -415,16 +679,11 @@ class BobRigView @JvmOverloads constructor(
             if (e >= BLINK_TOTAL) {
                 blinkStartedAt = 0L
                 blink = 0f
-                if (pendingDouble) {
-                    pendingDouble = false
-                    nextBlinkAt = now + 150L
-                } else {
-                    scheduleBlink(now)
-                }
+                if (pendingDouble) { pendingDouble = false; nextBlinkAt = now + 150L }
+                else scheduleBlink(now)
             }
         }
 
-        // bocca: dal livello audio se arriva, altrimenti sillabe simulate
         val target = when {
             !speaking -> 0f
             now - lastAudioAt < 350L -> audioLevel.coerceIn(0f, 1f)
@@ -439,10 +698,20 @@ class BobRigView @JvmOverloads constructor(
     }
 
     companion object {
-        private const val P_HEAD = "bob_head"
-        private const val P_BODY = "bob_body"
-        private const val P_ARM = "bob_arm"
-        private const val P_SHADOW = "bob_shadow"
+        private const val P_HEAD = "head"
+        private const val P_NECK = "neck"
+        private const val P_BODY = "body"
+        private const val P_ARM = "arm"
+        private const val P_HAND = "hand"
+        private const val P_LEG = "leg"
+        private const val P_SHADOW = "shadow"
+
+        const val TINT_COOL = 0xFF0E6E9C.toInt()
+        const val TINT_DEEP = 0xFF10314F.toInt()
+        const val TINT_WARM = 0xFF7A2B1E.toInt()
+
+        /** Durata di una increspatura sul vetro, in secondi. */
+        const val RIPPLE_LIFE = 0.7f
 
         private const val TWO_PI = 6.2831855f
         private const val BREATH_PERIOD = 3.6f
@@ -450,28 +719,6 @@ class BobRigView @JvmOverloads constructor(
         private const val BLINK_DOWN = 70L
         private const val BLINK_TOTAL = 165L
 
-        // geometria del rig, in frazioni della tela originale 568x820
-        private const val CANVAS_W = 568f
-        private const val CANVAS_H = 820f
-        private const val HEAD_X = 0.01408f
-        private const val HEAD_Y = 0.03537f
-        private const val HEAD_W = 0.95951f
-        private const val HEAD_H = 0.51585f
-        private const val BODY_X = 0.23768f
-        private const val BODY_Y = 0.52927f
-        private const val BODY_W = 0.5f
-        private const val BODY_H = 0.43537f
-        private const val ARM_X = 0.17782f
-        private const val ARM_MIRROR_X = 0.60744f
-        private const val ARM_Y = 0.55f
-        private const val ARM_W = 0.19014f
-        private const val ARM_H = 0.25244f
-        private const val ARM_PIVOT_X = 0.7083f
-        private const val ARM_PIVOT_Y = 0.0193f
-        private const val SHADOW_X = 0.13732f
-        private const val SHADOW_Y = 0.75488f
-        private const val SHADOW_W = 0.69366f
-        private const val SHADOW_H = 0.22927f
         private const val NECK_X = 0.4877f
         private const val NECK_Y = 0.55122f
         private const val FEET_Y = 0.92f

@@ -46,6 +46,7 @@ class ReceptionFragment : Fragment() {
             avatarIdle.setMode(mode)
             avatarGreeting.setMode(mode)
             avatarMenu.setMode(mode)
+            updateSettingsVisibility(mode)
         }
     }
 
@@ -171,15 +172,22 @@ class ReceptionFragment : Fragment() {
         panelGreeting.visibility =
             if (phase == ReceptionController.Phase.GREETING) View.VISIBLE else View.GONE
         panelMenu.visibility = if (phase == ReceptionController.Phase.MENU) View.VISIBLE else View.GONE
-        // Impostazioni sempre in alto a sinistra (idle/menu); nascoste solo in saluto
-        btnSettings.visibility =
-            if (phase == ReceptionController.Phase.GREETING) View.GONE else View.VISIBLE
+        updateSettingsVisibility(avatar.mode)
         avatar.onReceptionPhase(phase)
         if (phase == ReceptionController.Phase.MENU) {
             bindMenu()
         }
         if (phase == ReceptionController.Phase.GREETING) {
             textGreeting.text = BuddybobApp.instance.config.current.phrases.welcome
+        }
+    }
+
+    private fun updateSettingsVisibility(mode: BobAvatarMode = avatar.mode) {
+        // Nascoste in saluto e in standby (Bob che dorme)
+        btnSettings.visibility = when {
+            reception.phase == ReceptionController.Phase.GREETING -> View.GONE
+            mode == BobAvatarMode.IDLE_SLEEP -> View.GONE
+            else -> View.VISIBLE
         }
     }
 

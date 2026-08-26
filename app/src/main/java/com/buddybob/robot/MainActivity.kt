@@ -1,18 +1,23 @@
 package com.buddybob.robot
 
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
-import android.view.WindowManager
+import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.VideoView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
 import com.buddybob.robot.platform.PlaceContentStore
 import com.buddybob.robot.ui.AccessControlFragment
@@ -24,6 +29,8 @@ import com.buddybob.robot.ui.HomeFragment
 import com.buddybob.robot.ui.PlaceholderFeatureFragment
 import com.buddybob.robot.ui.PlacesFragment
 import com.buddybob.robot.ui.ReceptionFragment
+import com.buddybob.robot.ui.avatar.BobAvatarMode
+import com.buddybob.robot.ui.avatar.BobAvatarView
 import com.buddybob.robot.ui.SpeechFragment
 import com.buddybob.robot.ui.VoiceMemosFragment
 import com.buddybob.robot.ui.widget.SystemStatusBinder
@@ -54,19 +61,73 @@ class MainActivity : AppCompatActivity() {
             setContentView(R.layout.activity_main)
             applyImmersiveChrome()
             bindSystemStatus()
+            bindDialogueStopButtons()
             openReceptionOrHome()
         }, 700)
     }
 
-    /** Nasconde la status bar di sistema (icone sgranate) e usa la nostra. */
+    private fun bindDialogueStopButtons() {
+        val stop = View.OnClickListener {
+            BuddybobApp.instance.voiceUserStop()
+        }
+        findViewById<Button?>(R.id.btn_stop_speak)?.setOnClickListener(stop)
+        findViewById<Button?>(R.id.btn_stop_moving)?.setOnClickListener(stop)
+    }
+
+    enum class StopPlacement { SPEAKING, MOVING }
+
+    /** Pulsante STOP rosso: a destra (dialogo) o in basso al centro (movimento). */
+    fun showDialogueStop(placement: StopPlacement) {
+        handler.post {
+            val speakBtn = findViewById<Button?>(R.id.btn_stop_speak)
+            val moveBtn = findViewById<Button?>(R.id.btn_stop_moving)
+            when (placement) {
+                StopPlacement.SPEAKING -> {
+                    speakBtn?.visibility = View.VISIBLE
+                    // Se c'è overlay movimento, lo stop movimento ha priorità visiva
+                    val overlay = findViewById<View?>(R.id.overlay_place_media)
+                    if (overlay?.visibility == View.VISIBLE) {
+                        speakBtn?.visibility = View.GONE
+                        moveBtn?.visibility = View.VISIBLE
+                    } else {
+                        moveBtn?.visibility = View.GONE
+                    }
+                }
+                StopPlacement.MOVING -> {
+                    speakBtn?.visibility = View.GONE
+                    moveBtn?.visibility = View.VISIBLE
+                }
+            }
+        }
+    }
+
+    fun hideDialogueStop() {
+        handler.post {
+            findViewById<Button?>(R.id.btn_stop_speak)?.visibility = View.GONE
+            findViewById<Button?>(R.id.btn_stop_moving)?.visibility = View.GONE
+        }
+    }
+
+    /**
+     * Edge-to-edge: la nostra barra nera parte dal bordo fisico dello schermo.
+     * Nasconde le icone di sistema (sgranate su OrionStar).
+     */
     private fun applyImmersiveChrome() {
-        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-        window.statusBarColor = getColor(R.color.bob_black)
-        window.navigationBarColor = getColor(R.color.bob_black)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+        val controller = WindowInsetsControllerCompat(window, window.decorView)
+        controller.hide(WindowInsetsCompat.Type.systemBars())
+        controller.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        // Fallback API vecchia / RobotOS che ignora WindowInsetsController
         @Suppress("DEPRECATION")
         window.decorView.systemUiVisibility = (
-            View.SYSTEM_UI_FLAG_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                 or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
             )
     }
@@ -74,7 +135,50 @@ class MainActivity : AppCompatActivity() {
     private fun bindSystemStatus() {
         statusBinder?.stop()
         val bar = findViewById<View?>(R.id.bar_system_status) ?: return
+        // Estende la fascia nera sotto l'area status (se RobotOS ne lascia una)
+        val baseH = resources.getDimensionPixelSize(R.dimen.system_status_bar_height)
+        ViewCompat.setOnApplyWindowInsetsListener(bar) { v, insets ->
+            val top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
+            v.setPadding(v.paddingLeft, top, v.paddingRight, v.paddingBottom)
+            val lp = v.layoutParams
+            if (lp != null) {
+                lp.height = baseH + top
+                v.layoutParams = lp
+            }
+            insets
+        }
+        ViewCompat.requestApplyInsets(bar)
         statusBinder = SystemStatusBinder(bar).also { it.start() }
+        bindBottomSafeArea()
+    }
+
+    /** Evita che «Ho sentito» / STOP finiscano sotto nav bar o bezel. */
+    private fun bindBottomSafeArea() {
+        val root = findViewById<View?>(R.id.bar_voice_transcript)?.parent as? View ?: return
+        val voiceBar = findViewById<View>(R.id.bar_voice_transcript) ?: return
+        val stopSpeak = findViewById<View?>(R.id.btn_stop_speak)
+        val density = resources.displayMetrics.density
+        val baseVoice = (36 * density).toInt()
+        val baseStop = (48 * density).toInt()
+        // Su OrionStar spesso insets.bottom = 0: margine minimo extra di sicurezza
+        val fallbackExtra = (20 * density).toInt()
+
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val bottom = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            ).bottom
+            val pad = if (bottom > 0) bottom else fallbackExtra
+            (voiceBar.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.let { lp ->
+                lp.bottomMargin = baseVoice + pad
+                voiceBar.layoutParams = lp
+            }
+            (stopSpeak?.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.let { lp ->
+                lp.bottomMargin = baseStop + pad
+                stopSpeak.layoutParams = lp
+            }
+            insets
+        }
+        ViewCompat.requestApplyInsets(root)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -177,7 +281,7 @@ class MainActivity : AppCompatActivity() {
         return if (startsQuestion) "$t?" else t
     }
 
-    /** Overlay durante lo spostamento: media configurato oppure logo BOB. */
+    /** Schermo pieno durante lo spostamento: media dal web oppure Bob che cammina. */
     fun showMovingPlaceholder(
         destinationLabel: String,
         text: String?,
@@ -186,34 +290,38 @@ class MainActivity : AppCompatActivity() {
         BuddybobApp.instance.robot.avatar.onMoving()
         val caption = text?.trim()?.takeIf { it.isNotEmpty() }
             ?: getString(R.string.voice_moving_placeholder, destinationLabel)
-        showPlaceDisplay(caption, media, logoIfNoMedia = true)
+        showPlaceDisplay(caption, media, showBobIfNoMedia = true)
     }
 
     fun showPlaceDisplay(
         text: String?,
         media: PlaceContentStore.Media?,
-        logoIfNoMedia: Boolean = false
+        showBobIfNoMedia: Boolean = false
     ) {
         handler.post {
             val overlay = findViewById<FrameLayout?>(R.id.overlay_place_media) ?: return@post
             val image = findViewById<ImageView>(R.id.overlay_place_image)
             val video = findViewById<VideoView>(R.id.overlay_place_video)
+            val bob = findViewById<BobAvatarView?>(R.id.overlay_place_bob)
             val caption = findViewById<TextView>(R.id.overlay_place_text)
 
             stopVideo()
             image.setImageDrawable(null)
             image.visibility = View.GONE
             video.visibility = View.GONE
+            bob?.unbindSignals()
+            bob?.visibility = View.GONE
 
             val hasText = !text.isNullOrBlank()
             val url = media?.url?.trim().orEmpty()
             val type = media?.contentType.orEmpty()
-            if (!hasText && url.isBlank() && !logoIfNoMedia) {
+            if (!hasText && url.isBlank() && !showBobIfNoMedia) {
                 overlay.visibility = View.GONE
                 return@post
             }
 
             overlay.visibility = View.VISIBLE
+            showDialogueStop(StopPlacement.MOVING)
             if (hasText) {
                 caption.text = text
                 caption.visibility = View.VISIBLE
@@ -223,10 +331,16 @@ class MainActivity : AppCompatActivity() {
 
             when {
                 url.isBlank() -> {
-                    if (logoIfNoMedia) {
-                        image.setImageResource(R.drawable.logo_bob_mark)
-                        image.scaleType = ImageView.ScaleType.CENTER_INSIDE
-                        image.visibility = View.VISIBLE
+                    if (showBobIfNoMedia && bob != null) {
+                        bob.visibility = View.VISIBLE
+                        bob.bindSignals(BuddybobApp.instance.robot.avatar)
+                        bob.setMode(
+                            if (BuddybobApp.instance.robot.navigation.isBlockedByObstacle) {
+                                BobAvatarMode.BLOCKED
+                            } else {
+                                BobAvatarMode.MOVING
+                            }
+                        )
                     }
                 }
                 type.startsWith("video/") || url.endsWith(".mp4") || url.endsWith(".webm") -> {
@@ -238,18 +352,15 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 type.startsWith("audio/") -> {
-                    if (logoIfNoMedia) {
-                        image.setImageResource(R.drawable.logo_bob_mark)
-                        image.scaleType = ImageView.ScaleType.CENTER_INSIDE
-                        image.visibility = View.VISIBLE
+                    if (showBobIfNoMedia && bob != null) {
+                        bob.visibility = View.VISIBLE
+                        bob.bindSignals(BuddybobApp.instance.robot.avatar)
+                        bob.setMode(BobAvatarMode.MOVING)
                     }
                 }
                 else -> {
                     image.visibility = View.VISIBLE
-                    image.scaleType = ImageView.ScaleType.FIT_CENTER
-                    if (logoIfNoMedia) {
-                        image.setImageResource(R.drawable.logo_bob_mark)
-                    }
+                    image.scaleType = ImageView.ScaleType.CENTER_CROP
                     Thread {
                         val bmp = runCatching {
                             val req = Request.Builder().url(url).build()
@@ -261,10 +372,12 @@ class MainActivity : AppCompatActivity() {
                         handler.post {
                             if (bmp != null) {
                                 image.setImageBitmap(bmp)
-                                image.scaleType = ImageView.ScaleType.FIT_CENTER
-                            } else if (logoIfNoMedia) {
-                                image.setImageResource(R.drawable.logo_bob_mark)
-                                image.scaleType = ImageView.ScaleType.CENTER_INSIDE
+                                image.scaleType = ImageView.ScaleType.CENTER_CROP
+                            } else if (showBobIfNoMedia && bob != null) {
+                                image.visibility = View.GONE
+                                bob.visibility = View.VISIBLE
+                                bob.bindSignals(BuddybobApp.instance.robot.avatar)
+                                bob.setMode(BobAvatarMode.MOVING)
                             }
                         }
                     }.start()
@@ -278,7 +391,12 @@ class MainActivity : AppCompatActivity() {
             val overlay = findViewById<FrameLayout?>(R.id.overlay_place_media) ?: return@post
             stopVideo()
             findViewById<ImageView?>(R.id.overlay_place_image)?.setImageDrawable(null)
+            findViewById<BobAvatarView?>(R.id.overlay_place_bob)?.let { bob ->
+                bob.unbindSignals()
+                bob.visibility = View.GONE
+            }
             overlay.visibility = View.GONE
+            findViewById<Button?>(R.id.btn_stop_moving)?.visibility = View.GONE
             BuddybobApp.instance.robot.avatar.onVoiceIdle(
                 BuddybobApp.instance.robot.reception.phase
             )

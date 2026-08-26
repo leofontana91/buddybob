@@ -146,127 +146,48 @@ class PlacesFragment : Fragment() {
         btnStart.isEnabled = false
 
         scope.launch {
-            val nav = BuddybobApp.instance.robot.navigation
-            val speech = BuddybobApp.instance.robot.speech
-            val config = BuddybobApp.instance.config
-
+            val goTo = BuddybobApp.instance.robot.goTo
             for ((i, place) in route.withIndex()) {
                 if (!routeRunning) break
-                val extra = BuddybobApp.instance.robot.placeContent.get(place.name)
-                val label = extra?.labelOrName() ?: config.placeLabel(place.name)
-                val going = extra?.speakDepart(config.phraseGoingTo(label))
-                    ?: config.phraseGoingTo(label)
+                val label = BuddybobApp.instance.robot.placeContent.get(place.name)
+                    ?.labelOrName()
+                    ?: BuddybobApp.instance.config.placeLabel(place.name)
+                status.text = getString(R.string.places_going, label)
 
-                mainHandler.post {
-                    status.text = getString(R.string.places_going, label)
-                    (activity as? MainActivity)?.showPlaceDisplay(
-                        extra?.displayOnDepart,
-                        extra?.mediaOnDepart
+                val isLast = i == route.lastIndex
+                val after = when {
+                    isLast && returnHome ->
+                        com.buddybob.robot.platform.GoToController.After.RETURN
+                    isLast ->
+                        com.buddybob.robot.platform.GoToController.After.STAY
+                    else ->
+                        com.buddybob.robot.platform.GoToController.After.LEG
+                }
+
+                val err = withContext(Dispatchers.IO) {
+                    goTo.goBlocking(
+                        placeName = place.name,
+                        after = after,
+                        returnAfterSec = if (isLast && returnHome) waitSec else 0
                     )
                 }
-
-                speech.speak(going)
-
-                withContext(Dispatchers.Main) {
-                    // Pulisci stato precedente altrimenti waitForNavigation esce subito
-                    nav.lastStatusTextForWaitClear()
-                    status.text = getString(R.string.places_going, label)
-                    nav.startNavigation(place.name)
-                }
-
-                // startNavigation rilascia il chassis e parte dopo ~700ms
-                delay(1200)
-
-                extra?.speakWhileMoving?.trim()?.takeIf { it.isNotBlank() }?.let {
-                    speech.speak(it)
-                }
-                mainHandler.post {
-                    (activity as? MainActivity)?.showMovingPlaceholder(
-                        destinationLabel = label,
-                        text = extra?.displayWhileMoving,
-                        media = extra?.mediaWhileMoving
-                    )
-                }
-
-                waitForNavigation()
-
                 if (!routeRunning) break
-
-                mainHandler.post {
-                    status.text = getString(R.string.places_arriving, label)
-                    (activity as? MainActivity)?.showPlaceDisplay(
-                        extra?.displayOnArrive,
-                        extra?.mediaOnArrive
-                    )
+                if (err != null) {
+                    status.text = err
+                    break
                 }
-                speech.speak(
-                    extra?.speakArrive(
-                        config.current.phrases.format(
-                            config.current.phrases.arrived, "place" to label
-                        )
-                    ) ?: config.current.phrases.format(
-                        config.current.phrases.arrived, "place" to label
-                    )
-                )
 
-                if (waitSec > 0 && i < route.size - 1) {
-                    mainHandler.post {
-                        status.text = getString(R.string.places_waiting, label, waitSec)
-                    }
-                    delay(waitSec * 1000L)
-                } else if (waitSec > 0) {
-                    mainHandler.post {
-                        status.text = getString(R.string.places_waiting, label, waitSec)
-                    }
+                if (!isLast && waitSec > 0) {
+                    status.text = getString(R.string.places_waiting, label, waitSec)
                     delay(waitSec * 1000L)
                 }
-            }
-
-            if (routeRunning && returnHome) {
-                mainHandler.post {
-                    status.text = getString(R.string.places_returning)
-                }
-                speech.speak("Torno al punto di partenza")
-                withContext(Dispatchers.Main) {
-                    nav.goCharge()
-                }
-                waitForNavigation()
             }
 
             routeRunning = false
-            mainHandler.post {
-                status.text = getString(R.string.places_route_done)
-                btnStart.isEnabled = true
-                placesAdapter.clearSelection()
-                (activity as? MainActivity)?.hidePlaceDisplay()
-            }
+            status.text = getString(R.string.places_route_done)
+            btnStart.isEnabled = true
+            placesAdapter.clearSelection()
         }
-    }
-
-    private suspend fun waitForNavigation() {
-        val nav = BuddybobApp.instance.robot.navigation
-        var elapsed = 0
-        while (routeRunning && elapsed < 120) {
-            delay(1000)
-            elapsed += 1
-            // Usa lastStatusText del controller (non la TextView: poteva restare il risultato vecchio)
-            val statusText = nav.lastStatusText
-            if (isNavFinished(statusText)) break
-        }
-    }
-
-    private fun isNavFinished(statusText: String): Boolean {
-        if (statusText.isBlank()) return false
-        if (statusText.startsWith("Preparing") || statusText.contains("ritento")) return false
-        return statusText.contains("result status=") ||
-            statusText.contains("Already at") ||
-            statusText.contains("Cannot reach") ||
-            statusText.contains("Destination missing") ||
-            statusText.contains("Not localized") ||
-            statusText.contains("Navigation error") ||
-            statusText.contains("Nav error") ||
-            statusText == "Navigation already running" ||
-            statusText == "Chassis busy"
     }
 
     private fun stopRoute() {

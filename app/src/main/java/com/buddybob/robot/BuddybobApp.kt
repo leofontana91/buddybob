@@ -13,6 +13,7 @@ import com.buddybob.robot.platform.CommandPoller
 import com.buddybob.robot.platform.VoiceRouter
 import com.buddybob.robot.robot.BuddyModuleCallback
 import com.buddybob.robot.robot.BuddySpeechCallback
+import com.buddybob.robot.robot.ObstacleAnnouncer
 import com.buddybob.robot.robot.RobotFacade
 
 /**
@@ -42,19 +43,33 @@ class BuddybobApp : Application() {
         robot = RobotFacade(this)
         robot.speech.onSpeakingChanged = { speaking ->
             if (speaking) {
-                robot.avatar.onSpeaking()
+                // Se è bloccato e sta chiedendo spazio, resta in BLOCKED
+                if (!robot.navigation.isBlockedByObstacle) {
+                    robot.avatar.onSpeaking()
+                }
             } else {
-                val talkOpen =
-                    (currentActivity as? MainActivity)?.isTalkScreenOpen() == true
-                if (talkOpen) {
-                    robot.avatar.onListening()
-                } else {
-                    robot.avatar.onVoiceIdle(robot.reception.phase)
+                when {
+                    robot.navigation.isBlockedByObstacle -> robot.avatar.onBlocked()
+                    robot.navigation.isNavigating -> robot.avatar.onMoving()
+                    (currentActivity as? MainActivity)?.isTalkScreenOpen() == true ->
+                        robot.avatar.onListening()
+                    else -> robot.avatar.onVoiceIdle(robot.reception.phase)
                 }
             }
         }
         robot.speech.onSpeakText = { text ->
             (currentActivity as? MainActivity)?.showVoiceSaid(text)
+        }
+        robot.navigation.onObstacle = { blocked ->
+            if (blocked) {
+                robot.avatar.onBlocked()
+                ObstacleAnnouncer.onBlockedChanged(true)
+            } else {
+                ObstacleAnnouncer.onBlockedChanged(false)
+                if (robot.navigation.isNavigating) {
+                    robot.avatar.onMoving()
+                }
+            }
         }
         robot.reception.onGuestDetected = {
             val act = currentActivity
@@ -165,11 +180,16 @@ class BuddybobApp : Application() {
     /** Pulsante microfono UI: ascolto senza ripetere «Bob». */
     fun startVoiceListeningFromUi() = voiceRouter.armFromMic()
 
+    /** STOP sul monitor: ferma parlato/azione e riapre il dialogo. */
+    fun voiceUserStop() = voiceRouter.userStop()
+
     fun addVoiceListeningListener(listener: (Boolean) -> Unit) =
         voiceRouter.addListeningListener(listener)
 
     fun removeVoiceListeningListener(listener: (Boolean) -> Unit) =
         voiceRouter.removeListeningListener(listener)
+
+    fun notifyNavigationBusy(busy: Boolean) = voiceRouter.onNavigationBusy(busy)
 
     companion object {
         private const val TAG = "BuddybobApp"

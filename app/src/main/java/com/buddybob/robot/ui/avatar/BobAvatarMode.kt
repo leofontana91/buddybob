@@ -20,6 +20,8 @@ enum class BobAvatarMode {
     SPEAKING,
     /** Robot in navigazione. */
     MOVING,
+    /** Ostacolo: non riesce a passare. */
+    BLOCKED,
     /** Azione completata con successo. */
     SUCCESS,
 }

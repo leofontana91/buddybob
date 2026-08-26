@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { resolveVoiceWithAi } from "@/lib/voiceAi";
 import {
   openaiConfigured,
-  resolveVoiceRules,
+  placesForVoiceAi,
   type VoicePlace,
 } from "@/lib/voiceIntent";
 import {
@@ -69,10 +69,12 @@ export async function POST(req: Request) {
     where: { robotId: parsed.data.robotId },
     orderBy: { name: "asc" },
   });
-  const places: VoicePlace[] = mapPlaces.map((p) => ({
-    name: p.name,
-    label: p.label,
-  }));
+  const places: VoicePlace[] = placesForVoiceAi(
+    mapPlaces.map((p) => ({
+      name: p.name,
+      label: p.label,
+    }))
+  );
   const settings = await prisma.robotSettings.findUnique({
     where: { robotId: parsed.data.robotId },
   });
@@ -82,6 +84,15 @@ export async function POST(req: Request) {
   }
   const history = getVoiceHistory(parsed.data.robotId, sessionKey);
 
+  if (!openaiConfigured()) {
+    return NextResponse.json({
+      speak: "OPENAI_API_KEY non configurata.",
+      actions: [],
+      source: "rules",
+      aiConfigured: false,
+    });
+  }
+
   const fromAi = await resolveVoiceWithAi({
     text,
     places,
@@ -89,18 +100,12 @@ export async function POST(req: Request) {
     instructions: settings?.voiceInstructions,
     history,
   });
-  const result =
-    fromAi ??
-    resolveVoiceRules({
-      text,
-      places,
-      modules,
-    }) ?? {
-      speak:
-        "Non ho capito. Prova «apri appuntamenti» o «accompagnami in reception».",
-      actions: [],
-      source: "rules" as const,
-    };
+
+  const result = fromAi ?? {
+    speak: "Non riesco a rispondere adesso. Riprova tra un momento.",
+    actions: [] as const,
+    source: "rules" as const,
+  };
 
   if (fromAi?.newTopic) {
     clearVoiceHistory(parsed.data.robotId, sessionKey);
@@ -109,7 +114,7 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     ...result,
-    aiConfigured: openaiConfigured(),
+    aiConfigured: true,
     memoryTurns: getVoiceHistory(parsed.data.robotId, sessionKey).filter(
       (m) => m.role === "user"
     ).length,
