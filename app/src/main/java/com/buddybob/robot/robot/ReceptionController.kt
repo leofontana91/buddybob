@@ -32,6 +32,17 @@ class ReceptionController(
     var phase: Phase = Phase.IDLE
         private set
 
+    /**
+     * Se true e idleMediaStopMode=tap, il rilevamento non avvia il saluto
+     * finché l'UI non chiama [clearIdleMediaBlock].
+     */
+    @Volatile
+    var idleMediaBlockingDetection: Boolean = false
+
+    fun clearIdleMediaBlock() {
+        idleMediaBlockingDetection = false
+    }
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private var listening = false
     private var lastGreetingAtMs = 0L
@@ -39,6 +50,7 @@ class ReceptionController(
     private var presentSinceMs = 0L
     private var absentSinceMs = 0L
     private var greetingToken = 0
+    private var greetingPerson: Person? = null
     private val pollRunnable = object : Runnable {
         override fun run() {
             if (!listening) return
@@ -99,6 +111,7 @@ class ReceptionController(
         speech.stop()
         setPhase(Phase.MENU)
         onStatus?.invoke("Reception menu ready (skipped)")
+        openPostGreetingListen()
     }
 
     /** Dopo un “vai a” con stay: mostra subito il menu (scegli cosa fare). */
@@ -146,7 +159,6 @@ class ReceptionController(
 
         if (present) {
             absentSinceMs = 0L
-            // lo sguardo dell'avatar segue la persona più centrata davanti al robot
             nearby.minByOrNull { abs(it.angle.toDouble()) }?.let { p ->
                 BuddybobApp.instance.robot.avatar.onPersonAt(
                     p.angle.toFloat(), p.distance.toFloat()
@@ -157,9 +169,24 @@ class ReceptionController(
                 presentSinceMs = now
             }
             if (phase == Phase.IDLE && now - presentSinceMs >= PRESENCE_MS) {
+                // Media idle con stop «solo tocco»: non salutare finché non si tocca
+                if (cfg.idleMediaStopMode.equals("tap", ignoreCase = true) &&
+                    idleMediaBlockingDetection
+                ) {
+                    return
+                }
                 if (now - lastGreetingAtMs < REGREET_MS) return
-                val best = nearby.minByOrNull { abs(it.angle.toDouble()) } ?: nearby.first()
-                beginGreeting(best)
+                // Serve una figura umana stabile (volto), non solo un blob di movimento
+                val face = runCatching {
+                    follow.getBestFace(cfg.maxDistanceMeters)
+                }.getOrNull()?.takeIf { inFront(it, cfg.maxDistanceMeters) }
+                if (face == null) {
+                    // Corpo sì ma senza volto: aspetta ancora un po', poi lascia perdere
+                    if (now - presentSinceMs < PRESENCE_FACE_MS) return
+                    Log.d(TAG, "skip greeting: presence without face")
+                    return
+                }
+                beginGreeting(face)
             }
             return
         }
@@ -171,7 +198,12 @@ class ReceptionController(
         }
         presentSinceMs = 0L
         if (absentSinceMs == 0L) return
-        if (now - absentSinceMs < ABSENCE_MS) return
+        val absenceNeeded = when (phase) {
+            Phase.MENU -> ABSENCE_FROM_MENU_MS
+            Phase.GREETING -> ABSENCE_MS
+            Phase.IDLE -> ABSENCE_MS
+        }
+        if (now - absentSinceMs < absenceNeeded) return
 
         when (phase) {
             Phase.GREETING -> {
@@ -186,14 +218,18 @@ class ReceptionController(
 
     private fun inFront(person: Person, maxDistance: Double): Boolean {
         val distance = person.distance.toDouble()
-        if (distance <= 0.15 || distance > maxDistance) return false
-        if (abs(person.angle.toDouble()) > 70.0) return false
+        // Troppo vicino = spesso rumore / braccio / movimento interno
+        if (distance <= 0.35 || distance > maxDistance) return false
+        val maxAngle = BuddybobApp.instance.config.current.reception.detectAngleDeg
+            .coerceIn(20.0, 60.0)
+        if (abs(person.angle.toDouble()) > maxAngle) return false
         return true
     }
 
     private fun beginGreeting(person: Person?) {
         onGuestDetected?.invoke()
         val token = ++greetingToken
+        greetingPerson = person
         lastGreetingAtMs = System.currentTimeMillis()
         setPhase(Phase.GREETING)
         onStatus?.invoke("Greeting guest id=${person?.id}")
@@ -206,6 +242,7 @@ class ReceptionController(
             if (phase == Phase.GREETING) {
                 setPhase(Phase.MENU)
                 onStatus?.invoke("Reception menu ready (TTS timeout)")
+                openPostGreetingListen()
             }
         }, GREETING_FALLBACK_MS)
 
@@ -218,10 +255,17 @@ class ReceptionController(
                         if (token != greetingToken) return@helpDone
                         setPhase(Phase.MENU)
                         onStatus?.invoke("Reception menu ready")
+                        openPostGreetingListen()
                     })
                 }
             })
         }
+    }
+
+    /** Microfono ~5s senza wake word; poi hint «Dimmi ehi Bob…». */
+    private fun openPostGreetingListen() {
+        if (!BuddybobApp.instance.config.current.modules.speech) return
+        BuddybobApp.instance.armVoiceAfterReceptionGreeting(greetingPerson)
     }
 
     private fun lookAtGuest(person: Person?) {
@@ -235,45 +279,22 @@ class ReceptionController(
             robot.follow.stopFocusFollow()
         }
 
+        // Solo testa verso l'ospite. Niente smart-follow sul chassis qui:
+        // il follow fa spesso perdere il tracking e ri-innesca il saluto.
+        val headH = if (person != null) {
+            (-person.angle.toInt()).coerceIn(-90, 90)
+        } else {
+            0
+        }
         runCatching {
             motion.moveHead(
                 hMode = "absolute",
                 vMode = "absolute",
-                hAngle = 0,
+                hAngle = headH,
                 vAngle = vertical
             )
-        }
-
-        if (person != null) {
-            val angle = person.angle.toFloat()
-            runCatching {
-                when {
-                    angle > 8f -> motion.turnLeft(angleDeg = angle.coerceAtMost(90f))
-                    angle < -8f -> motion.turnRight(angleDeg = abs(angle).coerceAtMost(90f))
-                }
-            }
-        }
-
-        val followCfg = cfg.follow
-        val face = runCatching {
-            follow.getBestFace(cfg.reception.maxDistanceMeters)
-        }.getOrNull() ?: person
-
-        runCatching {
-            if (followCfg.preferSmartFollow) {
-                follow.startSmartFocusFollow(
-                    lostTimeoutSec = followCfg.lostTimeoutSec.toLong(),
-                    maxDistanceMeters = followCfg.maxDistanceMeters.toFloat()
-                )
-            } else {
-                follow.startFocusFollow(
-                    faceId = face?.id,
-                    lostTimeoutSec = followCfg.lostTimeoutSec.toLong(),
-                    maxDistanceMeters = followCfg.maxDistanceMeters.toFloat()
-                )
-            }
         }.onFailure {
-            Log.w(TAG, "lookAtGuest follow failed: ${it.message}")
+            Log.w(TAG, "lookAtGuest head failed: ${it.message}")
         }
     }
 
@@ -301,8 +322,15 @@ class ReceptionController(
         private const val TAG = "ReceptionController"
         private const val GREETING_FALLBACK_MS = 6_000L
         private const val POLL_MS = 400L
-        private const val PRESENCE_MS = 800L
-        private const val ABSENCE_MS = 4_000L
-        private const val REGREET_MS = 2_500L
+        /** Persona stabile davanti prima di considerare un saluto. */
+        private const val PRESENCE_MS = 1_600L
+        /** Tempo extra per confermare un volto (figura umana). */
+        private const val PRESENCE_FACE_MS = 3_000L
+        /** Perso di vista durante saluto → idle. */
+        private const val ABSENCE_MS = 6_000L
+        /** Dal menu: più tollerante ai flicker del sensore. */
+        private const val ABSENCE_FROM_MENU_MS = 14_000L
+        /** Non ri-salutare di continuo la stessa persona/passaggio. */
+        private const val REGREET_MS = 45_000L
     }
 }

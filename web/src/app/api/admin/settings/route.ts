@@ -102,7 +102,7 @@ export async function PATCH(req: Request) {
       welcomeSpeak: settings.welcomeSpeak ?? "Benvenuto",
       howCanIHelpSpeak: settings.howCanIHelpSpeak ?? "Come posso aiutarti?",
       receptionCooldownSec: settings.receptionCooldownSec ?? 45,
-      receptionDetectLevel: settings.receptionDetectLevel ?? 3,
+      receptionDetectLevel: settings.receptionDetectLevel ?? 2,
       standbyPlace: settings.standbyPlace ?? "",
       idleDisplayText: settings.idleDisplayText ?? "",
       idleMediaUrl: settings.idleMediaUrl ?? "",

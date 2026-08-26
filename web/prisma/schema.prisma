@@ -110,7 +110,7 @@ model RobotSettings {
   /// Secondi di inattività fuori reception prima di tornare al menu/standby
   receptionCooldownSec Int  @default(45)
   /// Sensibilità rilevazione 1 (solo vicino) … 5 (anche lontano)
-  receptionDetectLevel Int  @default(3)
+  receptionDetectLevel Int  @default(2)
   /// Punto mappa di accoglienza / ritorno
   standbyPlace       String @default("")
   /// Testo a schermo in idle (accoglienza senza ospite)

@@ -137,7 +137,7 @@ export function buildRobotConfig(
 
   const detectLevel = Math.min(
     5,
-    Math.max(1, s?.receptionDetectLevel ?? 3)
+    Math.max(1, s?.receptionDetectLevel ?? 2)
   );
   const idleUrlRaw = (s?.idleMediaUrl ?? "").trim();
   const idleCt = (s?.idleMediaContentType ?? "").trim();

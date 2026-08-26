@@ -100,11 +100,19 @@ data class BobConfig(
 
     data class Reception(
         val cooldownSec: Int = 45,
-        val maxDistanceMeters: Double = 4.5,
+        val maxDistanceMeters: Double = 1.8,
+        /** Cono frontale per rilevare l'ospite (gradi assoluti). */
+        val detectAngleDeg: Double = 35.0,
+        val detectLevel: Int = 2,
         val raiseHeadVertical: Int = 35,
         val buttons: List<MenuButton> = defaultMenuButtons(),
         val settingsPin: String = "1234",
-        val standbyPlace: String = ""
+        val standbyPlace: String = "",
+        val idleDisplayText: String = "",
+        val idleMedia: AssetRef? = null,
+        val idleMediaIntervalSec: Int = 20,
+        /** person | tap */
+        val idleMediaStopMode: String = "person"
     )
 
     data class MenuButton(

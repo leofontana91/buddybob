@@ -83,7 +83,7 @@ export default function ReceptionModulePage() {
     "Come posso aiutarti?"
   );
   const [cooldownSec, setCooldownSec] = useState(45);
-  const [detectLevel, setDetectLevel] = useState(3);
+  const [detectLevel, setDetectLevel] = useState(2);
   const [standbyPlace, setStandbyPlace] = useState("");
   const [idleDisplayText, setIdleDisplayText] = useState("");
   const [idleMedia, setIdleMedia] = useState<PlaceMedia | null>(null);
@@ -109,7 +109,7 @@ export default function ReceptionModulePage() {
       setWelcomeSpeak(s.welcomeSpeak ?? "Benvenuto");
       setHowCanIHelpSpeak(s.howCanIHelpSpeak ?? "Come posso aiutarti?");
       setCooldownSec(s.receptionCooldownSec ?? 45);
-      setDetectLevel(s.receptionDetectLevel ?? 3);
+      setDetectLevel(s.receptionDetectLevel ?? 2);
       setStandbyPlace(s.standbyPlace ?? "");
       setIdleDisplayText(s.idleDisplayText ?? "");
       setIdleIntervalSec(s.idleMediaIntervalSec ?? 20);
@@ -262,8 +262,9 @@ export default function ReceptionModulePage() {
               onChange={(e) => setDetectLevel(Number(e.target.value))}
             />
             <span className="mt-1 block text-sm text-[var(--bob-muted)]">
-              {DETECT_LEVEL_LABELS[detectLevel] ?? DETECT_LEVEL_LABELS[3]} ·
-              distanza effettiva ~{detectLevelToMeters(detectLevel)} m
+              {DETECT_LEVEL_LABELS[detectLevel] ?? DETECT_LEVEL_LABELS[2]} ·
+              distanza effettiva ~{detectLevelToMeters(detectLevel)} m.
+              Consigliato: 1–2 per evitare saluti su passaggi lontani.
             </span>
           </label>
           <label className="block text-sm font-medium">
