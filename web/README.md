@@ -44,6 +44,13 @@ Env vars Storage:
 - `SUPABASE_SERVICE_ROLE_KEY` o `SUPABASE_SECRET_KEY` (stesso, già iniettate)
 - `SUPABASE_ANDROID_APK_BUCKET` opzionale (default: `bob-android-apks`)
 
-Su **Supabase → Storage** crea una volta un bucket **privato** chiamato `bob-android-apks`.
+Su **Supabase → Storage** crea una volta un bucket **privato** chiamato `bob-android-apks`
+(oppure lascia che l’API lo crei al primo upload).
+
+**Limite dimensione APK:** non impostiamo `file_size_limit` sul bucket via API
+(se supera il Global file size limit, Supabase blocca anche la preparazione upload).
+Il limite effettivo è quello globale del progetto (es. 45 MB). Gli APK Buddybob
+sono ~7 MB. Se manca, crea un bucket **privato** `bob-android-apks` a mano.
+
 Le tabelle Prisma (`RobotAndroidRelease`, ecc.) si aggiornano da sole al deploy (`prisma db push`).
-L’integrazione **non** crea i bucket Storage.
+L’integrazione **non** crea i bucket Storage se mancano le env.
