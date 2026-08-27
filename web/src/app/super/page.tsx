@@ -61,6 +61,16 @@ async function putApkToStorage(params: {
       });
       if (putRes.ok) return { ok: true };
       const t = await putRes.text().catch(() => "");
+      if (
+        putRes.status === 413 ||
+        /EntityTooLarge|Payload too large|exceeded the maximum allowed size/i.test(t)
+      ) {
+        return {
+          ok: false,
+          error:
+            "APK oltre il limite Storage del progetto. L'APK Buddybob è ~7 MB — controlla Global file size limit / bucket bob-android-apks.",
+        };
+      }
       if (putRes.status !== 0) {
         const viaProxy = await pushApkViaServer(objectPath, file);
         if (viaProxy.ok) return { ok: true };

@@ -123,26 +123,84 @@ export async function createSignedApkUrl(params: {
   return absoluteStorageUrl(data.signedURL);
 }
 
+function storageAuthHeaders(
+  extra?: Record<string, string>
+): Record<string, string> {
+  return {
+    apikey: supabaseServiceRoleKey(),
+    Authorization: `Bearer ${supabaseServiceRoleKey()}`,
+    ...extra,
+  };
+}
+
+function isEntityTooLarge(status: number, body: string): boolean {
+  return (
+    status === 413 ||
+    /EntityTooLarge|Payload too large|exceeded the maximum allowed size/i.test(
+      body
+    )
+  );
+}
+
+/**
+ * Assicura che il bucket APK esista (privato).
+ * Non impostare file_size_limit via API: se supera il Global file size limit
+ * del progetto, Supabase risponde EntityTooLarge e blocca anche lo start upload.
+ * Il limite effettivo resta quello globale (es. 45 MB); l'APK è ~7 MB.
+ */
 export async function ensureAndroidApkBucket(): Promise<void> {
   const bucket = androidApkBucket();
-  const resp = await fetch(`${supabaseUrl()}/storage/v1/bucket`, {
+  const base = `${supabaseUrl()}/storage/v1/bucket`;
+
+  const get = await fetch(`${base}/${encodeURIComponent(bucket)}`, {
+    headers: storageAuthHeaders(),
+  });
+  if (get.ok) {
+    await softEnsurePrivateBucket(bucket);
+    return;
+  }
+
+  const create = await fetch(base, {
     method: "POST",
-    headers: {
-      apikey: supabaseServiceRoleKey(),
-      Authorization: `Bearer ${supabaseServiceRoleKey()}`,
-      "Content-Type": "application/json",
-    },
+    headers: storageAuthHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       id: bucket,
       name: bucket,
       public: false,
-      file_size_limit: 157_286_400,
     }),
   });
-  if (resp.ok || resp.status === 409) return;
-  const text = await resp.text().catch(() => "");
-  if (/already exists|duplicate/i.test(text)) return;
-  throw new Error(`Bucket Storage ${bucket}: HTTP ${resp.status} ${text}`);
+  if (create.ok) return;
+
+  const text = await create.text().catch(() => "");
+  if (create.status === 409 || /already exists|duplicate/i.test(text)) {
+    await softEnsurePrivateBucket(bucket);
+    return;
+  }
+
+  // Create con file_size_limit non usato: se arriva comunque EntityTooLarge, non bloccare.
+  if (isEntityTooLarge(create.status, text)) {
+    console.warn(
+      `Bucket ${bucket} create: EntityTooLarge (ignoro limite). ${text}`
+    );
+    return;
+  }
+
+  throw new Error(`Bucket Storage ${bucket}: HTTP ${create.status} ${text}`);
+}
+
+/** Solo private; niente file_size_limit (eredita il globale). */
+async function softEnsurePrivateBucket(bucket: string): Promise<void> {
+  const upd = await fetch(
+    `${supabaseUrl()}/storage/v1/bucket/${encodeURIComponent(bucket)}`,
+    {
+      method: "PUT",
+      headers: storageAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ public: false }),
+    }
+  );
+  if (upd.ok || upd.status === 409) return;
+  const text = await upd.text().catch(() => "");
+  console.warn(`Bucket ${bucket} update: HTTP ${upd.status} ${text}`);
 }
 
 export async function uploadApkObject(params: {
@@ -157,16 +215,21 @@ export async function uploadApkObject(params: {
   const resp = await fetch(url, {
     method: "POST",
     headers: {
-      apikey: supabaseServiceRoleKey(),
-      Authorization: `Bearer ${supabaseServiceRoleKey()}`,
-      "Content-Type": "application/octet-stream",
-      "x-upsert": "true",
-      "cache-control": "3600",
+      ...storageAuthHeaders({
+        "Content-Type": "application/octet-stream",
+        "x-upsert": "true",
+        "cache-control": "3600",
+      }),
     },
     body: params.body,
   });
   if (!resp.ok) {
     const text = await resp.text().catch(() => "");
+    if (isEntityTooLarge(resp.status, text)) {
+      throw new Error(
+        `APK troppo grande per Supabase Storage (limite globale progetto). Dettaglio: ${text}`
+      );
+    }
     throw new Error(`Upload Storage fallito (${resp.status}): ${text}`);
   }
 }

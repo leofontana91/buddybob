@@ -54,13 +54,18 @@ export async function POST(req: Request) {
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
+    const tooLarge =
+      /EntityTooLarge|Payload too large|maximum allowed size|Global file size|troppo grande|413/i.test(
+        message
+      );
     return NextResponse.json(
       {
-        error:
-          "Impossibile preparare l'upload Storage. Controlla SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (o SUPABASE_SECRET_KEY) e il bucket bob-android-apks.",
+        error: tooLarge
+          ? "Errore limite Storage in preparazione bucket (non l'APK). Riprova dopo il deploy; se persiste, in Supabase crea a mano il bucket privato bob-android-apks senza file size limit custom."
+          : "Impossibile preparare l'upload Storage. Controlla SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (o SUPABASE_SECRET_KEY) e il bucket bob-android-apks.",
         details: message,
       },
-      { status: 500 }
+      { status: tooLarge ? 413 : 500 }
     );
   }
 }
