@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { AuthSplitLayout } from "@/components/bob/AuthSplitLayout";
+import { Button } from "@/components/bob/Button";
 
 function ActivateForm() {
   const params = useSearchParams();
@@ -55,60 +57,63 @@ function ActivateForm() {
     router.replace("/login");
   }
 
+  const subtitle = info
+    ? `${info.companyName ? `${info.companyName} · ` : ""}${info.name} · ${info.email}`
+    : undefined;
+
   return (
-    <main className="min-h-screen flex items-center justify-center px-4">
-      <form
-        onSubmit={onSubmit}
-        className="w-full max-w-md bob-card p-8 shadow-sm"
-      >
-        <p className="bob-eyebrow">BOB Robotics</p>
-        <h1 className="bob-page-title mt-3">Attiva account</h1>
-        {info ? (
-          <p className="mt-2 text-sm text-[var(--bob-muted)]">
-            {info.companyName ? `${info.companyName} · ` : ""}
-            {info.name} · {info.email}
-          </p>
+    <AuthSplitLayout
+      eyebrow="Benvenuto"
+      title="Attiva account"
+      subtitle={subtitle}
+    >
+      <form onSubmit={onSubmit} className="mt-8 max-w-md space-y-4">
+        <div>
+          <label className="bob-label">Password</label>
+          <input
+            type="password"
+            required
+            minLength={6}
+            className="bob-input mt-2"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="bob-label">Conferma password</label>
+          <input
+            type="password"
+            required
+            minLength={6}
+            className="bob-input mt-2"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+          />
+        </div>
+        {error ? (
+          <p className="text-sm text-[var(--bob-warn-ink)]">{error}</p>
         ) : null}
-
-        <label className="block mt-8 text-sm font-medium">Password</label>
-        <input
-          type="password"
-          required
-          minLength={6}
-          className="mt-1 w-full bob-input"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-
-        <label className="block mt-4 text-sm font-medium">
-          Conferma password
-        </label>
-        <input
-          type="password"
-          required
-          minLength={6}
-          className="mt-1 w-full bob-input"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-        />
-
-        {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
-
-        <button
+        <Button
           type="submit"
+          className="w-full !py-4"
           disabled={loading || !info}
-          className="bob-btn mt-7 w-full py-3 font-medium disabled:opacity-50"
         >
           {loading ? "Salvataggio…" : "Crea password e attiva"}
-        </button>
+        </Button>
       </form>
-    </main>
+    </AuthSplitLayout>
   );
 }
 
 export default function ActivatePage() {
   return (
-    <Suspense fallback={<main className="p-8">Caricamento…</main>}>
+    <Suspense
+      fallback={
+        <main className="min-h-screen flex items-center justify-center p-8 text-[var(--bob-muted)]">
+          Caricamento…
+        </main>
+      }
+    >
       <ActivateForm />
     </Suspense>
   );

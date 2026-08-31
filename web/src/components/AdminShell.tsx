@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -12,6 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { BrandLogo } from "@/components/bob/BrandLogo";
 import { NavPill } from "@/components/bob/NavPill";
 import { robotDotColor, type RobotPresenceState } from "@/components/bob/RobotPresence";
 import {
@@ -231,24 +231,12 @@ export function AdminShell({
     <Ctx.Provider value={value}>
       <div className="min-h-screen flex flex-col bg-[var(--bob-bg)] text-[var(--bob-text)]">
         <header className="sticky top-0 z-40 flex h-[72px] shrink-0 items-center gap-4 sm:gap-7 bg-[var(--bob-ink)] px-4 sm:px-7">
-          <Link href="/admin" className="flex shrink-0 items-center gap-[11px]">
-            <Image
-              src="/brand/bob-mark.png"
-              alt=""
-              width={40}
-              height={56}
-              className="h-10 w-auto"
-              priority
-            />
-            <Image
-              src="/brand/bob-wordmark-white.png"
-              alt="BOB"
-              width={72}
-              height={16}
-              className="hidden sm:block h-4 w-auto"
-              priority
-            />
-          </Link>
+          <BrandLogo
+            variant="dark"
+            href="/admin"
+            markClassName="h-10 w-auto"
+            wordmarkClassName="hidden sm:block h-4 w-auto"
+          />
 
           <nav className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
             {links.map((l) => (

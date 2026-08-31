@@ -23,6 +23,10 @@ export const metadata: Metadata = {
   metadataBase: new URL(CANONICAL_APP_URL),
   title: "BOB — Piattaforma",
   description: "Accogli, accompagna e parla con i visitatori. BOB fa il lavoro operativo.",
+  icons: {
+    icon: [{ url: "/brand/bob-mark.png", type: "image/png" }],
+    apple: [{ url: "/brand/bob-mark.png", type: "image/png" }],
+  },
 };
 
 export const viewport: Viewport = {
